@@ -43,44 +43,44 @@ class MultVAE_DA(nn.Module):
         for i in range(len(self.dec_dims) - 1):
             self.decoder_domain.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
         
-        def encoder_forward(self, x):
-            if self.training:
-                x = self.dropout(x)
-            for layer in self.encoder:
-                x = layer(x)
-            mu = self.mu_layer(x)
-            logvar = self.logvar_layer(x)
-            return mu, logvar
-        
-        def encoder_forward_domain(self, x):
-            if self.training:
-                x = self.dropout(x)
-            for layer in self.encoder_domain:
-                x = layer(x)
-            mu = self.mu_layer_domain(x)
-            logvar = self.logvar_layer_domain(x)
-            return mu, logvar
-        
-        def reparameterize(self, mu, logvar):
-            std = torch.exp(0.5 * logvar)
-            eps = torch.randn_like(std)
-            return mu + eps * std
-        
-        def decoder_forward(self, z):
-            for layer in self.decoder:
-                z = layer(z)
-            return z
-        
-        def decoder_forward_domain(self, z):
-            for layer in self.decoder_domain:
-                z = layer(z)
-            return z
-        
-        def forward(self, x):
-            mu, logvar = self.encoder_forward(x)
-            mu_domain, logvar_domain = self.encoder_forward_domain(x)
-            z = self.reparameterize(mu, logvar)
-            z_domain = self.reparameterize(mu_domain, logvar_domain)
-            recon_x = self.decoder_forward(z)
-            recon_x_domain = self.decoder_forward_domain(z_domain)
-            return recon_x, mu, logvar, recon_x_domain, mu_domain, logvar_domain
+    def encoder_forward(self, x):
+        if self.training:
+            x = self.dropout(x)
+        for layer in self.encoder:
+            x = layer(x)
+        mu = self.mu_layer(x)
+        logvar = self.logvar_layer(x)
+        return mu, logvar
+    
+    def encoder_forward_domain(self, x):
+        if self.training:
+            x = self.dropout(x)
+        for layer in self.encoder_domain:
+            x = layer(x)
+        mu = self.mu_layer_domain(x)
+        logvar = self.logvar_layer_domain(x)
+        return mu, logvar
+    
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+    
+    def decoder_forward(self, z):
+        for layer in self.decoder:
+            z = layer(z)
+        return z
+    
+    def decoder_forward_domain(self, z):
+        for layer in self.decoder_domain:
+            z = layer(z)
+        return z
+    
+    def forward(self, x):
+        mu, logvar = self.encoder_forward(x)
+        mu_domain, logvar_domain = self.encoder_forward_domain(x)
+        z = self.reparameterize(mu, logvar)
+        z_domain = self.reparameterize(mu_domain, logvar_domain)
+        recon_x = self.decoder_forward(z)
+        recon_x_domain = self.decoder_forward_domain(z_domain)
+        return recon_x, mu, logvar, recon_x_domain, mu_domain, logvar_domain

@@ -25,27 +25,27 @@ class MultVAE(nn.Module):
         for i in range(len(self.dec_dims) - 1):
             self.decoder.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
         
-        def encoder_forward(self, x):
-            if self.training:
-                x = self.dropout(x)
-            for layer in self.encoder:
-                x = layer(x)
-            mu = self.mu_layer(x)
-            logvar = self.logvar_layer(x)
-            return mu, logvar
+    def encoder_forward(self, x):
+        if self.training:
+            x = self.dropout(x)
+        for layer in self.encoder:
+            x = layer(x)
+        mu = self.mu_layer(x)
+        logvar = self.logvar_layer(x)
+        return mu, logvar
         
-        def reparameterize(self, mu, logvar):
-            std = torch.exp(0.5 * logvar)
-            eps = torch.randn_like(std)
-            return mu + eps * std
-        
-        def decoder_forward(self, z):
-            for layer in self.decoder:
-                z = layer(z)
-            return z
-        
-        def forward(self, x):
-            mu, logvar = self.encoder_forward(x)
-            z = self.reparameterize(mu, logvar)
-            recon_x = self.decoder_forward(z)
-            return recon_x, mu, logvar
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+    
+    def decoder_forward(self, z):
+        for layer in self.decoder:
+            z = layer(z)
+        return z
+    
+    def forward(self, x):
+        mu, logvar = self.encoder_forward(x)
+        z = self.reparameterize(mu, logvar)
+        recon_x = self.decoder_forward(z)
+        return recon_x, mu, logvar
