@@ -30,12 +30,13 @@ def log_likelihood(y, mu, logvar):
         dim=1
     )
 
-def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8):
+def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
 
     model = MultVAE_DA([3416, 600, 200], latent_dim=latent_dim, dropout=0.5, training=True)
     mi_model = MI_net(200, 70)
+    mi_model.to(device)
     model.to(device)
     total_anneal_steps = anneal_steps  # Anneal over ~20-50 epochs depending on dataset size
     anneal_cap = anneal_cap
@@ -72,7 +73,6 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     )
 
     domain_loss = nn.CrossEntropyLoss()
-    adv_loss = nn.CrossEntropyLoss()
 
     print('Starting training...')
     best_result = 0.0
@@ -90,6 +90,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             mi_optim.zero_grad()
             _, mu_mipass, logvar_mipass, _, mu_domain_mipass, logvar_domain_mipass = model(x_data)
             sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass)
+            sample_z_mipass = sample_z_mipass.to(device)
             #print(sample_z_mipass.shape)
             features_for_pca.extend(sample_z_mipass.cpu().detach().numpy().tolist())
             sample_domain_z_mipass = reparameterize(mu=mu_domain_mipass, logvar=logvar_domain_mipass)
@@ -152,7 +153,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
            # #bound = torch.mean(q_yi_xi - q_yj_xi)
 
-            loss = MLL + anneal * KLD #+ 0.1 * bound
+            loss = MLL + anneal * KLD + club_weight * bound
             
             loss.backward()
             context_optim.step()
@@ -165,6 +166,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             gender_array = real_domain['gender'].map(gender_map).to_numpy()
             lables_for_visual.extend(gender_array)
             gender_tensor = torch.from_numpy(gender_array.copy()).float()
+            gender_tensor = gender_tensor.to(device)
             loss = domain_loss(domain_predictions_domainoptim, torch.unsqueeze(gender_tensor, 1))
             loss.backward()
             domain_optim.step()
@@ -192,12 +194,14 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             model.train()
 
     # visualize PCA with gender variable
-    lables_for_visual = [[1, 0] if x == 0 else [0, 1] for x in lables_for_visual]
+    num_men = sum(lables_for_visual)
+    majority_class_percentage = num_men / len(lables_for_visual)
+    #lables_for_visual = [[1, 0] if x == 0 else [0, 1] for x in lables_for_visual]
 
     features_for_pca = np.array(features_for_pca, dtype=np.float32)
-    lables_for_visual = np.array(lables_for_visual, dtype=np.float32)
+    lables_for_visual = np.array(lables_for_visual, dtype=np.float64)
 
-    print(lables_for_visual[0:10])
+    #print(lables_for_visual[0:10])
 
     features_len = features_for_pca.shape[0]
 
@@ -218,35 +222,40 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
         lr=1e-3,
         weight_decay=0.0
     )
+    adv_loss = nn.CrossEntropyLoss(torch.tensor([majority_class_percentage/(1-majority_class_percentage), majority_class_percentage/majority_class_percentage], dtype=torch.float32))
 
-    print(features_train.shape)
-    print(lables_train.shape)
 
-    for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
-        
-        x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
-        y_data = torch.from_numpy(lables_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
+    #print(features_train.shape)
+    #print(lables_train.shape)
+    for _ in range(10):
+        for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
+            
+            x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
+            y_data = torch.from_numpy(lables_train[batch*128:np.min([batch*128+128, features_train.shape[0]])]).long()
 
-        print(x_data.type())
-        print(y_data.type())
+            #print(x_data.type())
+            #print(y_data.type())
 
-        adv_optim.zero_grad()
-        predictions = adv_model(x_data)
-        print(F.softmax(predictions)[0])
-        print(y_data[0])
-        loss = adv_loss(F.softmax(predictions), y_data)
+            adv_optim.zero_grad()
+            predictions = adv_model(x_data)
+            #print(F.softmax(predictions)[0])
+            #print(predictions.type())
+            loss = adv_loss(predictions, y_data)
 
-        loss.backward()
-        adv_optim.step()
-
+            loss.backward()
+            adv_optim.step()
+    b_acc = 0.0
     with torch.no_grad():
         predictions_test = adv_model(torch.from_numpy(features_test))
-        correct = 0
-        for idx, pred in enumerate(predictions_test):
-            if (pred[0] > 0.5 and lables_test[idx][0] == 1) or pred[1] > 0.5 and lables_test[idx][1] == 1:
-                correct += 1
+        from sklearn.metrics import balanced_accuracy_score
 
-        print(f'ADV_Net accuraccy: {correct/len(predictions_test)}')
+        # After training, get all test predictions
+        all_preds = torch.argmax(predictions_test, dim=1).cpu().numpy()
+        all_true = lables_test #torch.argmax(torch.from_numpy(lables_test), dim=1).numpy()
+
+        b_acc = balanced_accuracy_score(all_true, all_preds)
+        print(f"Standardized Balanced Accuracy: {b_acc}")
+        # 0.5 is random chance, 1.0 is perfect bias, 0.0 is perfectly wrong
     # TODO: train user etc. blabblablabla
 
 
@@ -280,7 +289,10 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
                 recon_batch = recon_batch - (1000 * data)
                 batch_evaluator.eval_batch(np.arange(len_batch), recon_batch.cpu(), targets.cpu())
                 
-            print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
+            all_results = batch_evaluator.get_results().aggregated_metrics
+            print(f'Test Metrics: {all_results}')
 
     PATH = './ml1m_multvae_DA.pth'
     torch.save(model.state_dict(), PATH)
+
+    return b_acc, all_results["ndcg@10"]
