@@ -41,7 +41,7 @@ if __name__ == "__main__":
         for idx, fold in enumerate(train_loader):
             print("Fold ", idx)
             for club_weight in club_weights:
-                (b_acc, ndcg) = train_multvae_da(epochs=int(epochs+(club_weight/1000)), train_loader=DataLoader(fold, batch_size=128, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*int(45+(club_weight/1000)), anneal_cap=0.2, club_weight=club_weight)
+                (b_acc, ndcg) = train_multvae_da(epochs=int(epochs+(club_weight/100)), train_loader=DataLoader(fold, batch_size=128, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*int(45+(club_weight/100)), anneal_cap=0.2, club_weight=club_weight)
                 print(f"Club weight: {club_weight}, Best accuracy: {b_acc}, NDCG: {ndcg}")
                 all_results[club_weight].append((b_acc, ndcg))
 
