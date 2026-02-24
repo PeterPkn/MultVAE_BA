@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 import scipy.sparse as sp
+import pandas as pd
 import numpy as np
 import os
 
@@ -33,7 +34,7 @@ class MovieLensDataset(Dataset):
         x_sample = self.data[idx].toarray().squeeze()
         y_sample = self.targets[idx].toarray().squeeze()
         
-        return x_sample, y_sample
+        return x_sample, y_sample, idx
     
 def get_ml1m_dataloaders():
     train_fold_list = []
@@ -45,6 +46,7 @@ def get_ml1m_dataloaders():
                 fold_id=i
             )
         )
+    train_user_info = pd.read_csv(os.path.join(os.path.join('datasets', 'processed', 'ml-1m'), f"{i}", f'train_user_info.csv'))
     val_fold_list = []
     for i in range(5):
         val_fold_list.append(
@@ -63,4 +65,5 @@ def get_ml1m_dataloaders():
                 fold_id=i
             )
         )
-    return train_fold_list, val_fold_list, test_fold_list
+    
+    return train_fold_list, val_fold_list, test_fold_list, train_user_info

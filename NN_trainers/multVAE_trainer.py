@@ -22,7 +22,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, anneal_steps=
     best_result = 0.0
     best_model = None
     for j in range(epochs):
-        for i, (x_data, _) in enumerate(train_loader):
+        for i, (x_data, _, _) in enumerate(train_loader):
             x_data = x_data.to(device)
             optimizer.zero_grad()
             recon_batch, mu, logvar = model(x_data)
@@ -48,7 +48,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, anneal_steps=
             model.eval()
             batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])
             with torch.no_grad():
-                for (data, targets) in val_loader:
+                for (data, targets, _) in val_loader:
                     len_batch = data.size(0)
                     data = data.to(device)
                     recon_batch, mu, logvar = model(data)
@@ -68,7 +68,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, anneal_steps=
         model.eval()
         batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])
         with torch.no_grad():
-            for (data, targets) in test_loader:
+            for (data, targets, _) in test_loader:
                 len_batch = data.size(0)
                 data = data.to(device)
                 recon_batch, mu, logvar = model(data)

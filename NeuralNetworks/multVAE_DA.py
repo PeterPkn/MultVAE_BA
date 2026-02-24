@@ -40,8 +40,11 @@ class MultVAE_DA(nn.Module):
         self.decoder_domain = nn.ModuleList()
         self.decoder_domain.append(nn.Linear(latent_dim, self.dec_dims[0]))
         self.decoder_domain.append(nn.Tanh())
-        for i in range(len(self.dec_dims) - 1):
-            self.decoder_domain.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
+        self.decoder_domain.append(nn.Linear(self.dec_dims[0], 100))
+        self.decoder_domain.append(nn.Tanh())
+        self.decoder_domain.append(nn.Linear(100, 1))
+        #for i in range(len(self.dec_dims) - 1):
+        #    self.decoder_domain.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
         
     def encoder_forward(self, x):
         if self.training:
@@ -82,5 +85,5 @@ class MultVAE_DA(nn.Module):
         z = self.reparameterize(mu, logvar)
         z_domain = self.reparameterize(mu_domain, logvar_domain)
         recon_x = self.decoder_forward(z)
-        recon_x_domain = self.decoder_forward_domain(z_domain)
-        return recon_x, mu, logvar, recon_x_domain, mu_domain, logvar_domain
+        domain_prediction = self.decoder_forward_domain(z_domain)
+        return recon_x, mu, logvar, domain_prediction, mu_domain, logvar_domain
