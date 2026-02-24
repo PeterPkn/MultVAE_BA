@@ -190,7 +190,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
                 if result.aggregated_metrics['ndcg@10'] > best_result:  # Example threshold for early stopping
                     best_result = result.aggregated_metrics['ndcg@10']
                     best_model = model.state_dict()  # Save the best model weights
-                    print(f'New best model found at epoch {j+1} with NDCG@10: {best_result:.4f}')
+                    #print(f'New best model found at epoch {j+1} with NDCG@10: {best_result:.4f}')
             model.train()
 
     # visualize PCA with gender variable

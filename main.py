@@ -35,7 +35,7 @@ if __name__ == "__main__":
     elif args.multvae_da_visualize:
         train_loader, val_loader, test_loader, train_user_info = get_ml1m_dataloaders()
         club_weights = [0.0, 1000.0, 3000.0, 5000.0, 7000.0, 9000.0, 15000.0]
-        epochs = 1
+        epochs = 70
         all_results = {w: [] for w in club_weights}
 
         for idx, fold in enumerate(train_loader):
