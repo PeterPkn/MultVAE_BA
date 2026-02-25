@@ -237,7 +237,10 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
         lr=1e-3,
         weight_decay=0.0
     )
-    adv_loss = nn.CrossEntropyLoss(torch.tensor([majority_class_percentage/(1-majority_class_percentage), majority_class_percentage/majority_class_percentage], dtype=torch.float32))
+
+    weights = torch.tensor([majority_class_percentage/(1-majority_class_percentage), majority_class_percentage/majority_class_percentage], dtype=torch.float32)
+    weights = weights.to(device)
+    adv_loss = nn.CrossEntropyLoss(weights)
 
 
     #print(features_train.shape)
@@ -265,7 +268,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             adv_optim.step()
     b_acc = 0.0
     with torch.no_grad():
-        predictions_test = adv_model(torch.from_numpy(features_test))
+        features_test = torch.from_numpy(features_test).to(device)
+        predictions_test = adv_model(features_test)
         from sklearn.metrics import balanced_accuracy_score
 
         # After training, get all test predictions
@@ -273,10 +277,6 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
         all_true = lables_test #torch.argmax(torch.from_numpy(lables_test), dim=1).numpy()
 
         b_acc = balanced_accuracy_score(all_true, all_preds)
-        if b_acc < least_b_acc and epochs > 70:  # Only consider models after a certain number of epochs to avoid early instability
-            least_b_acc = b_acc
-            least_b_acc_model = model.state_dict()
-            print(f"New least balanced accuracy model found with BACC: {least_b_acc}")
         print(f"Standardized Balanced Accuracy: {b_acc}")
         # 0.5 is random chance, 1.0 is perfect bias, 0.0 is perfectly wrong
     # TODO: train user etc. blabblablabla
