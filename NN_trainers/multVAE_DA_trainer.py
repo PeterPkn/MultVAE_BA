@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch.utils.data import Subset
 import random
+from tqdm import tqdm
 
 def reparameterize(mu, logvar):
     std = torch.exp(0.5 * logvar)
@@ -30,7 +31,7 @@ def log_likelihood(y, mu, logvar):
         dim=1
     )
 
-def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0):
+def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
 
@@ -77,9 +78,10 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     print('Starting training...')
     best_result = 0.0
     best_model = None
+    last_model = None
     features_for_pca = []
     lables_for_visual = []
-    for j in range(epochs):
+    for j in tqdm(range(epochs)):
         for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
 
@@ -92,14 +94,14 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass)
             sample_z_mipass = sample_z_mipass.to(device)
             #print(sample_z_mipass.shape)
-            features_for_pca.extend(sample_z_mipass.cpu().detach().numpy().tolist())
+            #features_for_pca.extend(sample_z_mipass.cpu().detach().numpy().tolist())
             sample_domain_z_mipass = reparameterize(mu=mu_domain_mipass, logvar=logvar_domain_mipass)
             domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
             mi_loss = -torch.mean(log_likelihood(sample_domain_z_mipass, domain_pred_mu_mipass, domain_pred_logvar_mipass)) # negative log likelihood
             mi_loss.backward()
             mi_optim.step()
 
-            recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, domain_prediction_featureoptim, mu_domain_featureoptim, logvar_domain_featureoptim = model(x_data)
+            recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, logvar_domain_featureoptim = model(x_data)
             # Compute VAE loss
             if total_anneal_steps > 0:
                 anneal = min(anneal_cap, 1. * update_count / total_anneal_steps)
@@ -164,7 +166,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             real_domain = train_user_info.iloc[idx.numpy()]
             gender_map = {'M': 1, 'F': 0}
             gender_array = real_domain['gender'].map(gender_map).to_numpy()
-            lables_for_visual.extend(gender_array)
+            #lables_for_visual.extend(gender_array)
             gender_tensor = torch.from_numpy(gender_array.copy()).float()
             gender_tensor = gender_tensor.to(device)
             loss = domain_loss(domain_predictions_domainoptim, torch.unsqueeze(gender_tensor, 1))
@@ -192,6 +194,19 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
                     best_model = model.state_dict()  # Save the best model weights
                     #print(f'New best model found at epoch {j+1} with NDCG@10: {best_result:.4f}')
             model.train()
+
+    last_model = model.state_dict()  # Save the last model weights after training is complete
+
+    # get some random samples from the latent space to train the adversarial network on
+
+    for _, (x_data, _, idx) in enumerate(train_loader):
+            x_data = x_data.to(device)
+            _, mu, logvar, _, mu_domain, logvar_domain = model(x_data)
+            sample_z = reparameterize(mu=mu, logvar=logvar)
+            sample_z = sample_z.to(device)
+            features_for_pca.extend(sample_z.cpu().detach().numpy().tolist())
+            lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].map({'M': 1, 'F': 0}).tolist())
+
 
     # visualize PCA with gender variable
     num_men = sum(lables_for_visual)
@@ -227,11 +242,15 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
     #print(features_train.shape)
     #print(lables_train.shape)
-    for _ in range(10):
+    adv_model.to(device)
+    for _ in tqdm(range(10)):
         for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
             
             x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
             y_data = torch.from_numpy(lables_train[batch*128:np.min([batch*128+128, features_train.shape[0]])]).long()
+
+            x_data = x_data.to(device)
+            y_data = y_data.to(device)
 
             #print(x_data.type())
             #print(y_data.type())
@@ -254,6 +273,10 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
         all_true = lables_test #torch.argmax(torch.from_numpy(lables_test), dim=1).numpy()
 
         b_acc = balanced_accuracy_score(all_true, all_preds)
+        if b_acc < least_b_acc and epochs > 70:  # Only consider models after a certain number of epochs to avoid early instability
+            least_b_acc = b_acc
+            least_b_acc_model = model.state_dict()
+            print(f"New least balanced accuracy model found with BACC: {least_b_acc}")
         print(f"Standardized Balanced Accuracy: {b_acc}")
         # 0.5 is random chance, 1.0 is perfect bias, 0.0 is perfectly wrong
     # TODO: train user etc. blabblablabla
@@ -278,6 +301,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
     # check performance on test set after training is complete
     model.load_state_dict(best_model)  # Load the best model weights before testing
+    if prioritize_bias:
+        model.load_state_dict(last_model)
     if test_loader is not None:
         model.eval()
         batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])

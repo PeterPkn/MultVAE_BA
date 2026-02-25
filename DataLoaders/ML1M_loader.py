@@ -38,6 +38,10 @@ class MovieLensDataset(Dataset):
     
 def get_ml1m_dataloaders():
     train_fold_list = []
+    train_user_info = []
+    val_fold_list = []
+    test_fold_list = []
+
     for i in range(5):
         train_fold_list.append(
             MovieLensDataset(
@@ -46,9 +50,6 @@ def get_ml1m_dataloaders():
                 fold_id=i
             )
         )
-    train_user_info = pd.read_csv(os.path.join(os.path.join('datasets', 'processed', 'ml-1m'), f"{i}", f'train_user_info.csv'))
-    val_fold_list = []
-    for i in range(5):
         val_fold_list.append(
             MovieLensDataset(
                 data_dir=os.path.join('datasets', 'processed', 'ml-1m'),
@@ -56,8 +57,6 @@ def get_ml1m_dataloaders():
                 fold_id=i
             )
         )
-    test_fold_list = []
-    for i in range(5):
         test_fold_list.append(
             MovieLensDataset(
                 data_dir=os.path.join('datasets', 'processed', 'ml-1m'),
@@ -65,5 +64,6 @@ def get_ml1m_dataloaders():
                 fold_id=i
             )
         )
+        train_user_info.append(pd.read_csv(os.path.join(os.path.join('datasets', 'processed', 'ml-1m'), f"{i}", f'train_user_info.csv')))
     
     return train_fold_list, val_fold_list, test_fold_list, train_user_info

@@ -1,10 +1,15 @@
 import argparse
+import os
+
+import pandas as pd
+import torch
 from NN_trainers.multVAE_trainer import train as train_multvae
 from NN_trainers.multVAE_DA_trainer import train as train_multvae_da
 from DataLoaders.ML1M_loader import get_ml1m_dataloaders
 from torch.utils.data import DataLoader
 from matplotlib import pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
 # console app boilerplate
 if __name__ == "__main__":
@@ -14,36 +19,50 @@ if __name__ == "__main__":
     model_group.add_argument('--multvae', action='store_true', help='Train the multVAE model')
     model_group.add_argument('--multvae_da', action='store_true', help='Train the multVAE model with domain adaptation')
     model_group.add_argument('--multvae_da_visualize', action='store_true', help='Train the multVAE model with domain adaptation and visualize the bias by varying the CLUB weight')
+    parser.add_argument('--epochs', type=int, default=70, help='Number of training epochs')
+    parser.add_argument('--alldata', action='store_true', help='Use all data for training (no validation set)')
+    parser.add_argument('--prioritize_bias', action='store_true', help='Prioritize bias reduction by selecting the model with the lowest balanced accuracy on the bias prediction task, instead of the best validation performance')
+    parser.add_argument('--club_weight', type=float, default=7000.0, help='Weight for the CLUB penalty in the multVAE_DA model')
 
     # parse arguments
     args = parser.parse_args()
 
     # main logic here
     if args.multvae:
-        train_loader, val_loader, test_loader, train_user_info = get_ml1m_dataloaders()
+        train_loader, val_loader, test_loader, _ = get_ml1m_dataloaders()
         for idx, fold in enumerate(train_loader):
             print("Fold ", idx)
-            epochs = 70
+            epochs = args.epochs
             train_multvae(epochs=epochs, train_loader=DataLoader(fold, batch_size=128, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=0.2)
 
     elif args.multvae_da:
         train_loader, val_loader, test_loader, train_user_info = get_ml1m_dataloaders()
-        for idx, fold in enumerate(train_loader):
-            print("Fold ", idx)
-            epochs = 70
-            train_multvae_da(epochs=epochs, train_loader=DataLoader(fold, batch_size=128, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=0.2)
+        epochs = args.epochs
+        if args.alldata:
+            train_loader = torch.utils.data.ConcatDataset(train_loader)
+            val_loader = torch.utils.data.ConcatDataset(val_loader)
+            test_loader = torch.utils.data.ConcatDataset(test_loader)
+            train_user_info = pd.concat(train_user_info, ignore_index=True)
+            train_multvae_da(epochs=epochs, train_loader=DataLoader(train_loader, batch_size=128, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader, batch_size=128, shuffle=False), test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), anneal_steps=len(train_loader)*120, anneal_cap=0.2, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias)
+            
+        else:
+            for idx, fold in enumerate(train_loader):
+                print("Fold ", idx)
+                train_multvae_da(epochs=epochs, train_loader=DataLoader(fold, batch_size=128, shuffle=True), train_user_info=train_user_info[idx], val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*120, anneal_cap=0.2, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias)
     elif args.multvae_da_visualize:
         train_loader, val_loader, test_loader, train_user_info = get_ml1m_dataloaders()
-        club_weights = [0.0, 1000.0, 3000.0, 5000.0, 7000.0, 9000.0, 15000.0]
-        epochs = 70
+        train_loader = torch.utils.data.ConcatDataset(train_loader)
+        val_loader = torch.utils.data.ConcatDataset(val_loader)
+        test_loader = torch.utils.data.ConcatDataset(test_loader)
+        train_user_info = pd.concat(train_user_info, ignore_index=True)
+        club_weights = [0.0, 3000.0, 7000.0, 15000.0, 20000.0]
+        epochs = args.epochs
         all_results = {w: [] for w in club_weights}
-
-        for idx, fold in enumerate(train_loader):
-            print("Fold ", idx)
-            for club_weight in club_weights:
-                (b_acc, ndcg) = train_multvae_da(epochs=int(epochs+(club_weight/100)), train_loader=DataLoader(fold, batch_size=128, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*int(45+(club_weight/100)), anneal_cap=0.2, club_weight=club_weight)
-                print(f"Club weight: {club_weight}, Best accuracy: {b_acc}, NDCG: {ndcg}")
-                all_results[club_weight].append((b_acc, ndcg))
+        for club_weight in tqdm(club_weights):
+            
+            (b_acc, ndcg) = train_multvae_da(epochs=int(epochs+(club_weight/100)), train_loader=DataLoader(train_loader, batch_size=128, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader, batch_size=128, shuffle=False), test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), anneal_steps=len(train_loader)*int(45+(club_weight/100)), anneal_cap=0.2, club_weight=club_weight, prioritize_bias=args.prioritize_bias)
+            print(f"Club weight: {club_weight}, Best accuracy: {b_acc}, NDCG: {ndcg}")
+            all_results[club_weight].append((b_acc, ndcg))
 
         fig, ax1 = plt.subplots(figsize=(10, 6))
         ax2 = ax1.twinx()  # Create a second y-axis sharing the same x-axis
