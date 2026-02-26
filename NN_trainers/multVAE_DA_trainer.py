@@ -31,6 +31,12 @@ def log_likelihood(y, mu, logvar):
         dim=1
     )
 
+# input -> 500 -> 200 (latent) -> output
+# testen von BAcc auf MultVAE (ohne CLUB)
+# PCA auf MultVAE oder t-SNE, UMAP
+# erste 10-20 epochen ohne CLUB
+# domain encoder balanced accuracy track
+
 def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
@@ -69,7 +75,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     )
     mi_optim = optim.Adam(
         mi_variables,
-        lr=1e-3,
+        lr=5e-3,
         weight_decay=0.0
     )
 
@@ -112,8 +118,10 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             # Compute VAE loss
             if total_anneal_steps > 0:
                 anneal = min(anneal_cap, 1. * update_count / total_anneal_steps)
+                club_anneal = min(1., 1. * update_count / total_anneal_steps)
             else:
                 anneal = anneal_cap
+                club_anneal = club_weight
             update_count += x_data.size(0)  # count number of samples processed
 
 
@@ -138,7 +146,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
             # Calculate pairwise log-likelihoods: [B, B] matrix
             pairwise_ll = -0.5 * torch.sum(
-                logvar_expanded + (z_expanded - mu_expanded)**2 / torch.exp(logvar_expanded) + np.log(2 * np.pi), 
+                logvar_expanded + (z_expanded - mu_expanded)**2 / torch.exp(logvar_expanded) + np.log(2 * np.pi),
                 dim=2
             )
 
@@ -162,8 +170,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
            # #bound = torch.mean(q_yi_xi - q_yj_xi)
 
-            loss = MLL + anneal * KLD + club_weight * bound
-            
+            loss = MLL + anneal * KLD + (club_anneal * club_weight) * bound
+            #print(bound)
             loss.backward()
             context_optim.step()
 
@@ -300,22 +308,22 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     # TODO: train user etc. blabblablabla
 
 
-    # print(features_for_pca.shape)
-    # print(lables_for_visual.shape)
+    print(features_for_pca.shape)
+    print(lables_for_visual.shape)
 
-    # features_for_pca = features_for_pca.reshape(-1, features_for_pca.shape[-1])
-    # lables_for_visual = lables_for_visual.reshape(-1, lables_for_visual.shape[-1])
+    features_for_pca = features_for_pca.reshape(-1, features_for_pca.shape[-1])
+    lables_for_visual = lables_for_visual.reshape(-1, lables_for_visual.shape[-1])
 
-    # pca = PCA(n_components=2)
-    # reduced_features = pca.fit_transform(features_for_pca)
+    pca = PCA(n_components=2)
+    reduced_features = pca.fit_transform(features_for_pca)
 
-    # plt.figure(figsize=(10, 8))
-    # scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=lables_for_visual, cmap='viridis', alpha=0.7)
-    # plt.colorbar(scatter, label='Class Labels')
-    # plt.xlabel('Principal Component 1')
-    # plt.ylabel('Principal Component 2')
-    # plt.title('PCA Visualization of ResNet50 Features')
-    # plt.show()
+    plt.figure(figsize=(10, 8))
+    scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=lables_for_visual, cmap='viridis', alpha=0.7)
+    plt.colorbar(scatter, label='Class Labels')
+    plt.xlabel('Principal Component 1')
+    plt.ylabel('Principal Component 2')
+    plt.title('PCA Visualization of ResNet50 Features')
+    plt.show()
 
     # check performance on test set after training is complete
     model.load_state_dict(best_model)  # Load the best model weights before testing
