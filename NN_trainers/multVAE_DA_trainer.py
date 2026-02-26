@@ -75,7 +75,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     )
     mi_optim = optim.Adam(
         mi_variables,
-        lr=1e-3,
+        lr=5e-3,
         weight_decay=0.0
     )
 
@@ -111,8 +111,10 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             # Compute VAE loss
             if total_anneal_steps > 0:
                 anneal = min(anneal_cap, 1. * update_count / total_anneal_steps)
+                club_anneal = min(1., 1. * update_count / total_anneal_steps)
             else:
                 anneal = anneal_cap
+                club_anneal = club_weight
             update_count += x_data.size(0)  # count number of samples processed
 
 
@@ -161,7 +163,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
            # #bound = torch.mean(q_yi_xi - q_yj_xi)
 
-            loss = MLL + anneal * KLD + club_weight * bound
+            loss = MLL + anneal * KLD + (club_anneal * club_weight) * bound
             #print(bound)
             loss.backward()
             context_optim.step()

@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from rmet import BatchEvaluator
 import numpy as np
 
+
 def train(epochs, train_loader, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
