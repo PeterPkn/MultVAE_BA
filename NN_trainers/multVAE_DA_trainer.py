@@ -73,7 +73,12 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
         weight_decay=0.0
     )
 
-    domain_loss = nn.CrossEntropyLoss()
+    #train_user_info['gender'].map({'M': 1, 'F': 0})
+    men_count = train_user_info['gender'].value_counts().get('M', 0)
+    all_count = len(train_user_info)
+    weights = torch.tensor([(men_count/all_count)/(1-(men_count/all_count)), 1.0], device=device, dtype=torch.float32)  # Adjust weights for each class if needed
+
+    domain_loss = nn.CrossEntropyLoss(weight=weights)
 
     print('Starting training...')
     best_result = 0.0
@@ -82,6 +87,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     features_for_pca = []
     lables_for_visual = []
     for j in tqdm(range(epochs)):
+        avg_gender_loss = 0.0
         for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
 
@@ -91,16 +97,17 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             # calculate probability of domain sample given predicted distribution
             mi_optim.zero_grad()
             _, mu_mipass, logvar_mipass, _, mu_domain_mipass, logvar_domain_mipass = model(x_data)
-            sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass)
+            sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass).detach()  # Detach to prevent gradients from flowing into the VAE
             sample_z_mipass = sample_z_mipass.to(device)
             #print(sample_z_mipass.shape)
             #features_for_pca.extend(sample_z_mipass.cpu().detach().numpy().tolist())
-            sample_domain_z_mipass = reparameterize(mu=mu_domain_mipass, logvar=logvar_domain_mipass)
+            sample_domain_z_mipass = reparameterize(mu=mu_domain_mipass, logvar=logvar_domain_mipass).detach()
             domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
             mi_loss = -torch.mean(log_likelihood(sample_domain_z_mipass, domain_pred_mu_mipass, domain_pred_logvar_mipass)) # negative log likelihood
             mi_loss.backward()
             mi_optim.step()
 
+            context_optim.zero_grad()
             recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, logvar_domain_featureoptim = model(x_data)
             # Compute VAE loss
             if total_anneal_steps > 0:
@@ -167,11 +174,22 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             gender_map = {'M': 1, 'F': 0}
             gender_array = real_domain['gender'].map(gender_map).to_numpy()
             #lables_for_visual.extend(gender_array)
-            gender_tensor = torch.from_numpy(gender_array.copy()).float()
+            gender_tensor = torch.from_numpy(gender_array.copy())
             gender_tensor = gender_tensor.to(device)
-            loss = domain_loss(domain_predictions_domainoptim, torch.unsqueeze(gender_tensor, 1))
+
+            #print(domain_predictions_domainoptim.type())
+            #print(gender_tensor.type())
+
+            loss = domain_loss(domain_predictions_domainoptim, gender_tensor)
+
+            #print(loss.item())
+
+            avg_gender_loss += loss.item()
+            
             loss.backward()
             domain_optim.step()
+        
+        print(f'Average gender prediction loss after epoch {j+1}: {avg_gender_loss/len(train_loader):.4f}')
             
 
             #if i % 20 == 19:               
@@ -201,7 +219,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
     for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
-            _, mu, logvar, _, mu_domain, logvar_domain = model(x_data)
+            _, mu, logvar, _, _, _ = model(x_data)
             sample_z = reparameterize(mu=mu, logvar=logvar)
             sample_z = sample_z.to(device)
             features_for_pca.extend(sample_z.cpu().detach().numpy().tolist())
@@ -246,7 +264,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     #print(features_train.shape)
     #print(lables_train.shape)
     adv_model.to(device)
-    for _ in tqdm(range(10)):
+    for _ in tqdm(range(50)):
         for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
             
             x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])

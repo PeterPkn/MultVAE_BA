@@ -20,4 +20,5 @@ class MI_net(nn.Module):
         x_logvar = F.relu(self.logvar_fc1(z))
         x_logvar = F.relu(self.logvar_fc2(x_logvar))
         x_logvar = self.logvar_fc3(x_logvar)
+        x_logvar = torch.clamp(x_logvar, min=-5.0, max=5.0)
         return x_mu, x_logvar

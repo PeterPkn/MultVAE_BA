@@ -10,6 +10,7 @@ class MovieLensDataset(Dataset):
         self.data = sp.load_npz(os.path.join(data_dir, f"{fold_id}", f'{split}_input.npz'))
         self.num_users, self.num_items = self.data.shape
         self.num_interactions = self.data.sum()
+        self.id_offset = fold_id * self.num_users
 
         if split == 'train':
             # During training, we want to recreate the input
@@ -34,7 +35,7 @@ class MovieLensDataset(Dataset):
         x_sample = self.data[idx].toarray().squeeze()
         y_sample = self.targets[idx].toarray().squeeze()
         
-        return x_sample, y_sample, idx
+        return x_sample, y_sample, idx + self.id_offset  # Return the global user index for this fold
     
 def get_ml1m_dataloaders():
     train_fold_list = []

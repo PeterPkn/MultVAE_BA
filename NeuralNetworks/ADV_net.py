@@ -10,5 +10,6 @@ class ADV_net(nn.Module):
 
     def forward(self, z):
         z = F.relu(self.fc1(z))
-        z = F.sigmoid(self.fc2(z))
+        #z = F.sigmoid(self.fc2(z))
+        z = self.fc2(z)
         return z

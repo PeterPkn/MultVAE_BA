@@ -42,7 +42,8 @@ class MultVAE_DA(nn.Module):
         self.decoder_domain.append(nn.Tanh())
         self.decoder_domain.append(nn.Linear(self.dec_dims[0], 100))
         self.decoder_domain.append(nn.Tanh())
-        self.decoder_domain.append(nn.Linear(100, 1))
+        self.decoder_domain.append(nn.Linear(100, 2))
+        #self.decoder_domain.append(nn.Sigmoid())
         #for i in range(len(self.dec_dims) - 1):
         #    self.decoder_domain.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
         
