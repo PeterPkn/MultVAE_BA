@@ -315,7 +315,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     print(lables_for_visual.shape)
 
     #create random sample of 200 features for PCA visualization
-    index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(400)])
+    index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(1000)])
     random_sample = features_for_pca[index]
     random_label = lables_for_visual[index]
 
