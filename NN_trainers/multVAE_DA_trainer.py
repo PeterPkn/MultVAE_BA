@@ -1,3 +1,4 @@
+import os
 import torch
 from NeuralNetworks.multVAE_DA import MultVAE_DA
 from NeuralNetworks.MI_estimation_NN import MI_net
@@ -38,6 +39,8 @@ def log_likelihood(y, mu, logvar):
 # domain encoder balanced accuracy track
 
 def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False):
+    print("Training multVAE with domain adaptation...")
+    print(f"Club weight: {club_weight}, Anneal steps: {anneal_steps}, Anneal cap: {anneal_cap}")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
 
@@ -197,7 +200,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             loss.backward()
             domain_optim.step()
         
-        print(f'Average gender prediction loss after epoch {j+1}: {avg_gender_loss/len(train_loader):.4f}')
+        #print(f'Average gender prediction loss after epoch {j+1}: {avg_gender_loss/len(train_loader):.4f}')
             
 
             #if i % 20 == 19:               
@@ -228,9 +231,9 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
             _, mu, logvar, _, _, _ = model(x_data)
-            sample_z = reparameterize(mu=mu, logvar=logvar)
-            sample_z = sample_z.to(device)
-            features_for_pca.extend(sample_z.cpu().detach().numpy().tolist())
+            #sample_z = reparameterize(mu=mu, logvar=logvar)
+            #sample_z = sample_z.to(device)
+            features_for_pca.extend(mu.cpu().detach().numpy().tolist())
             lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].map({'M': 1, 'F': 0}).tolist())
 
 
@@ -272,7 +275,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     #print(features_train.shape)
     #print(lables_train.shape)
     adv_model.to(device)
-    for _ in tqdm(range(50)):
+    for _ in tqdm(range(100)):
         for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
             
             x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
@@ -311,19 +314,33 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     print(features_for_pca.shape)
     print(lables_for_visual.shape)
 
-    features_for_pca = features_for_pca.reshape(-1, features_for_pca.shape[-1])
-    lables_for_visual = lables_for_visual.reshape(-1, lables_for_visual.shape[-1])
+    #create random sample of 200 features for PCA visualization
+    index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(400)])
+    random_sample = features_for_pca[index]
+    random_label = lables_for_visual[index]
+
+    random_sample = random_sample.reshape(-1, random_sample.shape[-1]) #features_for_pca.reshape(-1, features_for_pca.shape[-1])
+    random_label = random_label.reshape(-1, random_label.shape[-1]) #lables_for_visual.reshape(-1, lables_for_visual.shape[-1])
 
     pca = PCA(n_components=2)
-    reduced_features = pca.fit_transform(features_for_pca)
+    reduced_features = pca.fit_transform(random_sample)
 
     plt.figure(figsize=(10, 8))
-    scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=lables_for_visual, cmap='viridis', alpha=0.7)
+    scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=random_label, cmap='viridis', alpha=0.7)
     plt.colorbar(scatter, label='Class Labels')
     plt.xlabel('Principal Component 1')
     plt.ylabel('Principal Component 2')
     plt.title('PCA Visualization of ResNet50 Features')
-    plt.show()
+    # make savefig not overwrite existing files
+    
+    
+    filename = 'multvae_da_PCA.png'
+    counter = 1
+    while os.path.exists(filename):
+        filename = f'multvae_da_PCA_{counter}.png'
+        counter += 1
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    #plt.show()
 
     # check performance on test set after training is complete
     model.load_state_dict(best_model)  # Load the best model weights before testing
