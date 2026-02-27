@@ -1,3 +1,5 @@
+import os
+import random
 import torch
 from NeuralNetworks.multVAE import MultVAE
 import torch.optim as optim
@@ -120,6 +122,36 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None):
 
         b_acc = balanced_accuracy_score(all_true, all_preds)
         print(f"Standardized Balanced Accuracy: {b_acc}")
+
+    #create random sample of 200 features for PCA visualization
+    from sklearn.decomposition import PCA
+    from matplotlib import pyplot as plt
+
+    index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(1000)])
+    random_sample = features_for_pca[index]
+    random_label = lables_for_visual[index]
+
+    random_sample = random_sample.reshape(-1, random_sample.shape[-1]) #features_for_pca.reshape(-1, features_for_pca.shape[-1])
+    random_label = random_label.reshape(-1, random_label.shape[-1]) #lables_for_visual.reshape(-1, lables_for_visual.shape[-1])
+
+    pca = PCA(n_components=2)
+    reduced_features = pca.fit_transform(random_sample)
+
+    plt.figure(figsize=(10, 8))
+    scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=random_label, cmap='viridis', alpha=0.7)
+    plt.colorbar(scatter, label='Class Labels')
+    plt.xlabel('Principal Component 1')
+    plt.ylabel('Principal Component 2')
+    plt.title('PCA Visualization')
+    # make savefig not overwrite existing files
+    
+    
+    filename = 'multvae_da_PCA.png'
+    counter = 1
+    while os.path.exists(filename):
+        filename = f'multvae_PCA_{counter}.png'
+        counter += 1
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
 
     # check performance on test set after training is complete
     if test_loader is not None:

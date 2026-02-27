@@ -45,7 +45,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     latent_dim = 200
 
     model = MultVAE_DA([3416, 600, 200], latent_dim=latent_dim, dropout=0.5, training=True)
-    mi_model = MI_net(200, 70)
+    mi_model = MI_net(200, 400)
     mi_model.to(device)
     model.to(device)
     total_anneal_steps = anneal_steps  # Anneal over ~20-50 epochs depending on dataset size
@@ -91,12 +91,17 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
     print('Starting training...')
     best_result = 0.0
+    best_epoch = 0
     best_model = None
     last_model = None
     features_for_pca = []
     lables_for_visual = []
     for j in tqdm(range(epochs)):
         avg_gender_loss = 0.0
+        bound_sum = 0.0
+        kld_sum = 0.0
+        mll_sum = 0.0
+
         for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
 
@@ -120,12 +125,13 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, logvar_domain_featureoptim = model(x_data)
             # Compute VAE loss
             if total_anneal_steps > 0:
-                anneal = min(anneal_cap, 1. * update_count / total_anneal_steps)
+                anneal = min(anneal_cap, anneal_cap * update_count / total_anneal_steps)
                 club_anneal = min(1., 1. * update_count / total_anneal_steps)
             else:
                 anneal = anneal_cap
                 club_anneal = club_weight
-            update_count += x_data.size(0)  # count number of samples processed
+            update_count += x_data.size(0)
+            #print(f"Processed samples: {update_count}")  # count number of samples processed
 
 
             log_probs = F.log_softmax(recon_batch_featureoptim, dim=1)
@@ -143,7 +149,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(sample_z_featureoptim)           
             batch_size = sample_z_featureoptim.shape[0]
 
-            z_expanded = sample_domain_z_featureoptim.unsqueeze(1) 
+            z_expanded = sample_domain_z_featureoptim.detach().unsqueeze(1)
             mu_expanded = domain_pred_mu_featureoptim.unsqueeze(0)
             logvar_expanded = domain_pred_logvar_featureoptim.unsqueeze(0)
 
@@ -160,8 +166,13 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             row_sums = torch.sum(pairwise_ll, dim=1)
             q_yj_xi = (row_sums - q_yi_xi) / (batch_size - 1)
 
+            
             bound = torch.mean(q_yi_xi - q_yj_xi)
+            bound = torch.clamp(bound, min=0.0)
 
+            bound_sum += bound.item()
+            kld_sum += KLD.item()
+            mll_sum += MLL.item()
             #sample_domain_z = reparameterize(mu=mu_domain, logvar=logvar_domain)
             #domain_pred_mu, domain_pred_logvar = mi_model(sample_z)
             #q_yi_xi = log_likelihood(sample_domain_z, domain_pred_mu, domain_pred_logvar)
@@ -199,8 +210,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             
             loss.backward()
             domain_optim.step()
-        
-        #print(f'Average gender prediction loss after epoch {j+1}: {avg_gender_loss/len(train_loader):.4f}')
+        print(f"\nEpoch {j+1}, Batch MI Bound: {bound_sum/len(train_loader):.4f}, KLD: {kld_sum/len(train_loader):.4f}, MLL: {mll_sum/len(train_loader):.4f}, anneal: {anneal:.4f}, club_anneal: {(club_anneal * club_weight):.4f}")
+        print(f'Average gender prediction loss after epoch {j+1}: {avg_gender_loss/len(train_loader):.4f}')
             
 
             #if i % 20 == 19:               
@@ -220,6 +231,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
                 #print(f'Validation Metrics after epoch {j+1}: {result.aggregated_metrics}')
                 if result.aggregated_metrics['ndcg@10'] > best_result:  # Example threshold for early stopping
                     best_result = result.aggregated_metrics['ndcg@10']
+                    best_epoch = j+1
                     best_model = model.state_dict()  # Save the best model weights
                     #print(f'New best model found at epoch {j+1} with NDCG@10: {best_result:.4f}')
             model.train()
@@ -227,7 +239,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     last_model = model.state_dict()  # Save the last model weights after training is complete
 
     # get some random samples from the latent space to train the adversarial network on
-
+    print(f"Best epoch: {best_epoch}")
+    model.load_state_dict(best_model)  # Load the best model weights before extracting features
     for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
             _, mu, logvar, _, _, _ = model(x_data)
@@ -255,8 +268,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     features_test = features_for_pca[features_len-1000:]
     lables_test = lables_for_visual[features_len-1000:]
 
-    np.save('features_for_advnet', features_for_pca)
-    np.save('labeles_for_advnet', lables_for_visual)
+    np.save('features_for_advnet_multvae_da', features_for_pca)
+    np.save('labeles_for_advnet_multvae_da', lables_for_visual)
 
     # TRAIN ADV-net
 
@@ -330,7 +343,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     plt.colorbar(scatter, label='Class Labels')
     plt.xlabel('Principal Component 1')
     plt.ylabel('Principal Component 2')
-    plt.title('PCA Visualization of ResNet50 Features')
+    plt.title(f'PCA Visualization, epochs: {epochs}, club_weight: {club_weight}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}')
     # make savefig not overwrite existing files
     
     
