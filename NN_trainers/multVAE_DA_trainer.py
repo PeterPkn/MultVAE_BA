@@ -38,14 +38,14 @@ def log_likelihood(y, mu, logvar):
 # erste 10-20 epochen ohne CLUB
 # domain encoder balanced accuracy track
 
-def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False):
+def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False, latent_dim_domain=100):
     print("Training multVAE with domain adaptation...")
     print(f"Club weight: {club_weight}, Anneal steps: {anneal_steps}, Anneal cap: {anneal_cap}")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
 
-    model = MultVAE_DA([3416, 600, 200], latent_dim=latent_dim, dropout=0.5, training=True)
-    mi_model = MI_net(200, 400)
+    model = MultVAE_DA([3416, 600, 200], latent_dim=latent_dim, dropout=0.5, training=True, latent_dim_domain=latent_dim_domain)
+    mi_model = MI_net(200, 500, latent_dim_domain)
     mi_model.to(device)
     model.to(device)
     total_anneal_steps = anneal_steps  # Anneal over ~20-50 epochs depending on dataset size
@@ -78,7 +78,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     )
     mi_optim = optim.Adam(
         mi_variables,
-        lr=5e-3,
+        lr=1e-3,
         weight_decay=0.0
     )
 
@@ -109,17 +109,19 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             # maximize log-likelyhood for MI-estimation, 
             # CURRENT METHOD: MI_net predicts domain distribution from feature sample -> 
             # calculate probability of domain sample given predicted distribution
-            mi_optim.zero_grad()
-            _, mu_mipass, logvar_mipass, _, mu_domain_mipass, logvar_domain_mipass = model(x_data)
-            sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass).detach()  # Detach to prevent gradients from flowing into the VAE
-            sample_z_mipass = sample_z_mipass.to(device)
-            #print(sample_z_mipass.shape)
-            #features_for_pca.extend(sample_z_mipass.cpu().detach().numpy().tolist())
-            sample_domain_z_mipass = reparameterize(mu=mu_domain_mipass, logvar=logvar_domain_mipass).detach()
-            domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
-            mi_loss = -torch.mean(log_likelihood(sample_domain_z_mipass, domain_pred_mu_mipass, domain_pred_logvar_mipass)) # negative log likelihood
-            mi_loss.backward()
-            mi_optim.step()
+            for _ in range(5):
+                mi_optim.zero_grad()
+                _, mu_mipass, logvar_mipass, _, mu_domain_mipass, logvar_domain_mipass = model(x_data)
+                sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass).detach()  # Detach to prevent gradients from flowing into the VAE
+                sample_z_mipass = sample_z_mipass.to(device)
+                #print(sample_z_mipass.shape)
+                #features_for_pca.extend(sample_z_mipass.cpu().detach().numpy().tolist())
+                #sample_domain_z_mipass = reparameterize(mu=mu_domain_mipass, logvar=logvar_domain_mipass).detach()
+                target_domain = mu_domain_mipass.detach()
+                domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
+                mi_loss = -torch.mean(log_likelihood(target_domain, domain_pred_mu_mipass, domain_pred_logvar_mipass)) # negative log likelihood
+                mi_loss.backward()
+                mi_optim.step()
 
             context_optim.zero_grad()
             recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, logvar_domain_featureoptim = model(x_data)
@@ -140,16 +142,24 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             MLL = torch.mean(-torch.sum(log_probs * x_data, dim=1))
             KLD = torch.mean(-0.5 * torch.sum(1 + logvar_featureoptim - mu_featureoptim.pow(2) - logvar_featureoptim.exp(), dim=1))
 
+            # Calculate KLD for both spaces to keep them anchored around 0
+            #KLD_c = torch.mean(-0.5 * torch.sum(1 + logvar_featureoptim - mu_featureoptim.pow(2) - logvar_featureoptim.exp(), dim=1))
+            #KLD_d = torch.mean(-0.5 * torch.sum(1 + logvar_domain_featureoptim - mu_domain_featureoptim.pow(2) - logvar_domain_featureoptim.exp(), dim=1))
+            
+            # Combine them
+            #KLD = KLD_c + KLD_d
+
             # log q(yi|xi)
 
             # for each sample:
             # calculate log q(yi|xi)
             sample_z_featureoptim = reparameterize(mu=mu_featureoptim, logvar=logvar_featureoptim)
-            sample_domain_z_featureoptim = reparameterize(mu=mu_domain_featureoptim, logvar=logvar_domain_featureoptim)
+            #sample_domain_z_featureoptim = reparameterize(mu=mu_domain_featureoptim, logvar=logvar_domain_featureoptim)
+            target_domain_featureoptim = mu_domain_featureoptim.detach()
             domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(sample_z_featureoptim)           
             batch_size = sample_z_featureoptim.shape[0]
 
-            z_expanded = sample_domain_z_featureoptim.detach().unsqueeze(1)
+            z_expanded = target_domain_featureoptim.unsqueeze(1)
             mu_expanded = domain_pred_mu_featureoptim.unsqueeze(0)
             logvar_expanded = domain_pred_logvar_featureoptim.unsqueeze(0)
 
@@ -191,7 +201,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
             model.zero_grad()
             domain_optim.zero_grad()
-            _, _, _, domain_predictions_domainoptim, _, _ = model(x_data) # 0 is female, 1 is male
+            _, _, _, domain_predictions_domainoptim, mu_domain_domainoptim, logvar_domain_domainoptim = model(x_data) # 0 is female, 1 is male
             real_domain = train_user_info.iloc[idx.numpy()]
             gender_map = {'M': 1, 'F': 0}
             gender_array = real_domain['gender'].map(gender_map).to_numpy()
@@ -202,7 +212,10 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             #print(domain_predictions_domainoptim.type())
             #print(gender_tensor.type())
 
-            loss = domain_loss(domain_predictions_domainoptim, gender_tensor)
+            KLD_d = torch.mean(-0.5 * torch.sum(1 + logvar_domain_domainoptim - mu_domain_domainoptim.pow(2) - logvar_domain_domainoptim.exp(), dim=1))
+            #l2_reg = torch.mean(mu_domain_domainoptim.pow(2))
+
+            loss = domain_loss(domain_predictions_domainoptim, gender_tensor) + anneal * KLD_d #0.05 * l2_reg
 
             #print(loss.item())
 
@@ -241,6 +254,9 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     # get some random samples from the latent space to train the adversarial network on
     print(f"Best epoch: {best_epoch}")
     model.load_state_dict(best_model)  # Load the best model weights before extracting features
+    if prioritize_bias:
+        model.load_state_dict(last_model)  # Load the last model weights if prioritizing bias
+    model.eval()
     for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
             _, mu, logvar, _, _, _ = model(x_data)
@@ -343,7 +359,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     plt.colorbar(scatter, label='Class Labels')
     plt.xlabel('Principal Component 1')
     plt.ylabel('Principal Component 2')
-    plt.title(f'PCA Visualization, epochs: {epochs}, club_weight: {club_weight}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}')
+    plt.title(f'PCA Visualization, epochs: {epochs}, club_weight: {club_weight}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}, best_epoch: {best_epoch}, best_ndcg@10: {best_result:.4f}, latent dim domain size: {latent_dim_domain}')
     # make savefig not overwrite existing files
     
     
@@ -356,11 +372,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     #plt.show()
 
     # check performance on test set after training is complete
-    model.load_state_dict(best_model)  # Load the best model weights before testing
-    if prioritize_bias:
-        model.load_state_dict(last_model)
     if test_loader is not None:
-        model.eval()
+        #model.eval()
         batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])
         with torch.no_grad():
             for (data, targets, _) in test_loader:
