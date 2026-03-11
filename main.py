@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--prioritize_bias', action='store_true', help='Prioritize bias reduction by selecting the model with the lowest balanced accuracy on the bias prediction task, instead of the best validation performance')
     parser.add_argument('--club_weight', type=float, default=7000.0, help='Weight for the CLUB penalty in the multVAE_DA model')
     parser.add_argument('--test_bias', action='store_true', help='Test the bias of the trained model using an adversarial network')
-
+    parser.add_argument('--batch_size', type=int, default=128, help='Batch size for training and testing')
     # parse arguments
     args = parser.parse_args()
 
@@ -40,15 +40,15 @@ if __name__ == "__main__":
             train_user_info = pd.concat(train_user_info, ignore_index=True)
 
             if args.test_bias:
-                test(train_loader=DataLoader(train_loader, batch_size=128, shuffle=False), train_user_info=train_user_info, test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), val_loader=DataLoader(val_loader, batch_size=128, shuffle=False))
+                test(train_loader=DataLoader(train_loader, batch_size=args.batch_size, shuffle=False), train_user_info=train_user_info, test_loader=DataLoader(test_loader, batch_size=args.batch_size, shuffle=False), val_loader=DataLoader(val_loader, batch_size=args.batch_size, shuffle=False))
             else:
-                train_multvae(epochs=args.epochs, train_loader=DataLoader(train_loader, batch_size=128, shuffle=True), val_loader=DataLoader(val_loader, batch_size=128, shuffle=False), test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), train_user_info=train_user_info, anneal_steps=len(train_loader)*45, anneal_cap=0.2)
+                train_multvae(epochs=args.epochs, train_loader=DataLoader(train_loader, batch_size=args.batch_size, shuffle=True), val_loader=DataLoader(val_loader, batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader, batch_size=args.batch_size, shuffle=False), train_user_info=train_user_info, anneal_steps=len(train_loader)*45, anneal_cap=0.2)
 
         else:
             for idx, fold in enumerate(train_loader):
                 print("Fold ", idx)
                 epochs = args.epochs
-                train_multvae(epochs=epochs, train_loader=DataLoader(fold, batch_size=128, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=0.2)
+                train_multvae(epochs=epochs, train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=0.2)
 
     elif args.multvae_da:
         train_loader, val_loader, test_loader, train_user_info = get_ml1m_dataloaders()
@@ -59,24 +59,24 @@ if __name__ == "__main__":
             test_loader = torch.utils.data.ConcatDataset(test_loader)
             train_user_info = pd.concat(train_user_info, ignore_index=True)
             #print(len(train_loader))
-            train_multvae_da(epochs=epochs, train_loader=DataLoader(train_loader, batch_size=128, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader, batch_size=128, shuffle=False), test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), anneal_steps=len(train_loader)*45, anneal_cap=0.2, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias)
+            train_multvae_da(epochs=epochs, train_loader=DataLoader(train_loader, batch_size=args.batch_size, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader, batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader, batch_size=args.batch_size, shuffle=False), anneal_steps=len(train_loader)*45, anneal_cap=0.2, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias)
             
         else:
             for idx, fold in enumerate(train_loader):
                 print("Fold ", idx)
-                train_multvae_da(epochs=epochs, train_loader=DataLoader(fold, batch_size=128, shuffle=True), train_user_info=train_user_info[idx], val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*120, anneal_cap=0.2, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias)
+                train_multvae_da(epochs=epochs, train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), train_user_info=train_user_info[idx], val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*120, anneal_cap=0.2, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias)
     elif args.multvae_da_visualize:
         train_loader, val_loader, test_loader, train_user_info = get_ml1m_dataloaders()
         train_loader = torch.utils.data.ConcatDataset(train_loader)
         val_loader = torch.utils.data.ConcatDataset(val_loader)
         test_loader = torch.utils.data.ConcatDataset(test_loader)
         train_user_info = pd.concat(train_user_info, ignore_index=True)
-        club_weights = [0.1, 0.5, 1, 5, 10]
+        club_weights = [2, 10, 20, 50, 100, 150, 200]
         epochs = args.epochs
         all_results = {w: [] for w in club_weights}
         for club_weight in tqdm(club_weights):
             
-            (b_acc, ndcg) = train_multvae_da(epochs=int(epochs), train_loader=DataLoader(train_loader, batch_size=128, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader, batch_size=128, shuffle=False), test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), anneal_steps=len(train_loader)*int(45), anneal_cap=0.2, club_weight=club_weight, prioritize_bias=args.prioritize_bias)
+            (b_acc, ndcg) = train_multvae_da(epochs=int(epochs), train_loader=DataLoader(train_loader, batch_size=args.batch_size, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader, batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader, batch_size=args.batch_size, shuffle=False), anneal_steps=len(train_loader)*int(45), anneal_cap=0.2, club_weight=30, prioritize_bias=args.prioritize_bias, latent_dim_domain=club_weight)
             print(f"Club weight: {club_weight}, Best accuracy: {b_acc}, NDCG: {ndcg}")
             all_results[club_weight].append((b_acc, ndcg))
 
@@ -130,5 +130,5 @@ if __name__ == "__main__":
             ax1.legend(lines, labels, loc='upper center')
 
             # Save the figure
-            plt.savefig('fairness_vs_utility_tradeoff.png', dpi=300, bbox_inches='tight')
+            plt.savefig('fairness_vs_utility_tradeoff_dimensiontest.png', dpi=300, bbox_inches='tight')
             plt.show()

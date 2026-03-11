@@ -20,9 +20,9 @@ class MultVAE(nn.Module):
         self.logvar_layer = nn.Linear(self.enc_dims[-1], latent_dim)
 
         self.decoder = nn.ModuleList()
-        self.decoder.append(nn.Linear(latent_dim, self.dec_dims[0]))
-        self.decoder.append(nn.Tanh())
+        self.decoder.append(nn.Linear(self.latent_dim, self.dec_dims[0]))
         for i in range(len(self.dec_dims) - 1):
+            self.decoder.append(nn.Tanh())
             self.decoder.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
         
     def encoder_forward(self, x):

@@ -38,14 +38,14 @@ def log_likelihood(y, mu, logvar):
 # erste 10-20 epochen ohne CLUB
 # domain encoder balanced accuracy track
 
-def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False, latent_dim_domain=100):
+def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False, latent_dim_domain=200):
     print("Training multVAE with domain adaptation...")
     print(f"Club weight: {club_weight}, Anneal steps: {anneal_steps}, Anneal cap: {anneal_cap}")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
 
     model = MultVAE_DA([3416, 600, 200], latent_dim=latent_dim, dropout=0.5, training=True, latent_dim_domain=latent_dim_domain)
-    mi_model = MI_net(200, 500, latent_dim_domain)
+    mi_model = MI_net(200, 300, latent_dim_domain)
     mi_model.to(device)
     model.to(device)
     total_anneal_steps = anneal_steps  # Anneal over ~20-50 epochs depending on dataset size
@@ -78,7 +78,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     )
     mi_optim = optim.Adam(
         mi_variables,
-        lr=1e-3,
+        lr=2e-3,
         weight_decay=0.0
     )
 
@@ -128,7 +128,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             # Compute VAE loss
             if total_anneal_steps > 0:
                 anneal = min(anneal_cap, anneal_cap * update_count / total_anneal_steps)
-                club_anneal = min(1., 1. * update_count / total_anneal_steps)
+                club_anneal = 0 if j < 40 else min(1., 1. * (j - 40) / (epochs - 40))  # Linearly increase CLUB weight after 40 epochs
             else:
                 anneal = anneal_cap
                 club_anneal = club_weight
@@ -153,11 +153,11 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
             # for each sample:
             # calculate log q(yi|xi)
-            sample_z_featureoptim = reparameterize(mu=mu_featureoptim, logvar=logvar_featureoptim)
+            #sample_z_featureoptim = reparameterize(mu=mu_featureoptim, logvar=logvar_featureoptim)
             #sample_domain_z_featureoptim = reparameterize(mu=mu_domain_featureoptim, logvar=logvar_domain_featureoptim)
             target_domain_featureoptim = mu_domain_featureoptim.detach()
-            domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(sample_z_featureoptim)           
-            batch_size = sample_z_featureoptim.shape[0]
+            domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(mu_featureoptim)
+            batch_size = mu_featureoptim.shape[0]
 
             z_expanded = target_domain_featureoptim.unsqueeze(1)
             mu_expanded = domain_pred_mu_featureoptim.unsqueeze(0)
@@ -194,12 +194,14 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
            # #bound = torch.mean(q_yi_xi - q_yj_xi)
 
-            loss = MLL + anneal * KLD + (club_anneal * club_weight) * bound
+
+            loss_feature = MLL + anneal * KLD + (club_anneal * club_weight) * bound
             #print(bound)
-            loss.backward()
+            loss_feature.backward()
             context_optim.step()
 
             model.zero_grad()
+            mi_model.zero_grad()
             domain_optim.zero_grad()
             _, _, _, domain_predictions_domainoptim, mu_domain_domainoptim, logvar_domain_domainoptim = model(x_data) # 0 is female, 1 is male
             real_domain = train_user_info.iloc[idx.numpy()]
@@ -215,7 +217,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             KLD_d = torch.mean(-0.5 * torch.sum(1 + logvar_domain_domainoptim - mu_domain_domainoptim.pow(2) - logvar_domain_domainoptim.exp(), dim=1))
             #l2_reg = torch.mean(mu_domain_domainoptim.pow(2))
 
-            loss = domain_loss(domain_predictions_domainoptim, gender_tensor) + anneal * KLD_d #0.05 * l2_reg
+            loss = domain_loss(domain_predictions_domainoptim, gender_tensor) #+ anneal * KLD_d #0.05 * l2_reg
 
             #print(loss.item())
 
@@ -255,6 +257,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     print(f"Best epoch: {best_epoch}")
     model.load_state_dict(best_model)  # Load the best model weights before extracting features
     if prioritize_bias:
+        print("Prioritizing bias in feature extraction by loading the last model weights...")
         model.load_state_dict(last_model)  # Load the last model weights if prioritizing bias
     model.eval()
     for _, (x_data, _, idx) in enumerate(train_loader):
@@ -266,23 +269,16 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].map({'M': 1, 'F': 0}).tolist())
 
 
-    # visualize PCA with gender variable
     num_men = sum(lables_for_visual)
-    majority_class_percentage = num_men / len(lables_for_visual)
+    features_len = len(lables_for_visual)
     #lables_for_visual = [[1, 0] if x == 0 else [0, 1] for x in lables_for_visual]
 
     features_for_pca = np.array(features_for_pca, dtype=np.float32)
     lables_for_visual = np.array(lables_for_visual, dtype=np.float64)
 
-    #print(lables_for_visual[0:10])
-
-    features_len = features_for_pca.shape[0]
-
-    features_train = features_for_pca[0:features_len-1000]
-    lables_train = lables_for_visual[0:features_len-1000]
-
-    features_test = features_for_pca[features_len-1000:]
-    lables_test = lables_for_visual[features_len-1000:]
+    #create train test split for adversarial network
+    from sklearn.model_selection import train_test_split
+    features_train, features_test, lables_train, lables_test = train_test_split(features_for_pca, lables_for_visual, test_size=0.2, stratify=lables_for_visual)
 
     np.save('features_for_advnet_multvae_da', features_for_pca)
     np.save('labeles_for_advnet_multvae_da', lables_for_visual)
@@ -296,7 +292,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
         weight_decay=0.0
     )
 
-    weights = torch.tensor([majority_class_percentage/(1-majority_class_percentage), majority_class_percentage/majority_class_percentage], dtype=torch.float32)
+    weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
     weights = weights.to(device)
     adv_loss = nn.CrossEntropyLoss(weights)
 
