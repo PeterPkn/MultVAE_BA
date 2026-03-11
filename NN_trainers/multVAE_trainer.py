@@ -16,10 +16,13 @@ def reparameterize(mu, logvar):
     return mu + eps * std
 
 
-def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_info=None, anneal_steps=10000, anneal_cap=0.8):
+def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_info=None, anneal_steps=10000, anneal_cap=0.8, small_model=False):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-    model = MultVAE([3416, 600, 200], latent_dim=200, dropout=0.5, training=True)
+    standard_model = [3416, 600, 200]
+    small_model_dim = [3416, 500]
+    model = MultVAE(standard_model, latent_dim=200, dropout=0.5, training=True)
+    if small_model:
+            model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=0.5, training=True)
     model.to(device)
     total_anneal_steps = anneal_steps  # Anneal over ~20-50 epochs depending on dataset size
     anneal_cap = anneal_cap
@@ -124,6 +127,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
 
     from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import balanced_accuracy_score
 
     # Standardize the features
     scaler = StandardScaler()
@@ -163,7 +167,6 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     with torch.no_grad():
         features_test = torch.from_numpy(features_test).to(device)
         predictions_test = adv_model(features_test)
-        from sklearn.metrics import balanced_accuracy_score
 
         # After training, get all test predictions
         all_preds = torch.argmax(predictions_test, dim=1).cpu().numpy()

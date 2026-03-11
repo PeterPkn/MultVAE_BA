@@ -25,6 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--prioritize_bias', action='store_true', help='Prioritize bias reduction by selecting the model with the lowest balanced accuracy on the bias prediction task, instead of the best validation performance')
     parser.add_argument('--club_weight', type=float, default=7000.0, help='Weight for the CLUB penalty in the multVAE_DA model')
     parser.add_argument('--test_bias', action='store_true', help='Test the bias of the trained model using an adversarial network')
+    parser.add_argument('--small_model', action='store_true', help='Use a smaller model of dimension: INPUT->500->200(latent)->OUTPUT.')
 
     # parse arguments
     args = parser.parse_args()
@@ -40,15 +41,15 @@ if __name__ == "__main__":
             train_user_info = pd.concat(train_user_info, ignore_index=True)
 
             if args.test_bias:
-                test(train_loader=DataLoader(train_loader, batch_size=128, shuffle=False), train_user_info=train_user_info, test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), val_loader=DataLoader(val_loader, batch_size=128, shuffle=False))
+                test(train_loader=DataLoader(train_loader, batch_size=128, shuffle=False), train_user_info=train_user_info, test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), val_loader=DataLoader(val_loader, batch_size=128, shuffle=False), small_model=args.small_model)
             else:
-                train_multvae(epochs=args.epochs, train_loader=DataLoader(train_loader, batch_size=128, shuffle=True), val_loader=DataLoader(val_loader, batch_size=128, shuffle=False), test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), train_user_info=train_user_info, anneal_steps=len(train_loader)*45, anneal_cap=0.2)
+                train_multvae(epochs=args.epochs, train_loader=DataLoader(train_loader, batch_size=128, shuffle=True), val_loader=DataLoader(val_loader, batch_size=128, shuffle=False), test_loader=DataLoader(test_loader, batch_size=128, shuffle=False), train_user_info=train_user_info, anneal_steps=len(train_loader)*45, anneal_cap=0.2, small_model=args.small_model)
 
         else:
             for idx, fold in enumerate(train_loader):
                 print("Fold ", idx)
                 epochs = args.epochs
-                train_multvae(epochs=epochs, train_loader=DataLoader(fold, batch_size=128, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=0.2)
+                train_multvae(epochs=epochs, train_loader=DataLoader(fold, batch_size=128, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=128, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=128, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=0.2, small_model=args.small_model)
 
     elif args.multvae_da:
         train_loader, val_loader, test_loader, train_user_info = get_ml1m_dataloaders()

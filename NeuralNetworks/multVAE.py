@@ -3,10 +3,10 @@ from torch import nn
 from torch.nn import functional as F
 
 class MultVAE(nn.Module):
-    def __init__(self, dims, latent_dim=200, dropout=0.5, training=True):
+    def __init__(self, dims, latent_dim=200, decoder_dims = None, dropout=0.5, training=True):
         super(MultVAE, self).__init__()
         self.enc_dims = dims
-        self.dec_dims = dims[::-1]
+        self.dec_dims = dims[::-1] if decoder_dims is None else decoder_dims
         self.latent_dim = latent_dim
         self.dropout = nn.Dropout(dropout)
         self.training = training
@@ -21,7 +21,8 @@ class MultVAE(nn.Module):
 
         self.decoder = nn.ModuleList()
         self.decoder.append(nn.Linear(latent_dim, self.dec_dims[0]))
-        self.decoder.append(nn.Tanh())
+        if len(self.dec_dims) > 1:
+            self.decoder.append(nn.Tanh())
         for i in range(len(self.dec_dims) - 1):
             self.decoder.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
         

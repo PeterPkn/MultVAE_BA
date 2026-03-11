@@ -16,9 +16,13 @@ def reparameterize(mu, logvar):
     return mu + eps * std
 
 
-def test(train_loader, test_loader=None, val_loader=None, train_user_info=None):
+def test(train_loader, test_loader=None, val_loader=None, train_user_info=None, small_model=False):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = MultVAE([3416, 600, 200], latent_dim=200, dropout=0.5, training=False)
+    standard_model = [3416, 600, 200]
+    small_model_dim = [3416, 500]
+    model = MultVAE(standard_model, latent_dim=200, dropout=0.5, training=True)
+    if small_model:
+            model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=0.5, training=True)
     model.load_state_dict(torch.load('./ml1m_multvae.pth', map_location=device))
     model.eval()
     model.to(device)
@@ -125,6 +129,7 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None):
 
     #create random sample of 200 features for PCA visualization
     from sklearn.decomposition import PCA
+    from sklearn.manifold import TSNE
     from matplotlib import pyplot as plt
 
     index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(1000)])
@@ -136,6 +141,12 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None):
 
     pca = PCA(n_components=2)
     reduced_features = pca.fit_transform(random_sample)
+
+    tsne = TSNE(n_components=2, learning_rate='auto',
+
+                  init='random').fit_transform(random_sample)
+    
+    
 
     plt.figure(figsize=(10, 8))
     scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=random_label, cmap='viridis', alpha=0.7)
@@ -150,6 +161,23 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None):
     counter = 1
     while os.path.exists(filename):
         filename = f'multvae_PCA_{counter}.png'
+        counter += 1
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+
+    
+    plt.figure(figsize=(10, 8))
+    scatter = plt.scatter(tsne[:, 0], tsne[:, 1], c=random_label, cmap='viridis', alpha=0.7)
+    plt.colorbar(scatter, label='Class Labels')
+    plt.xlabel('Principal Component 1')
+    plt.ylabel('Principal Component 2')
+    plt.title('TSNE Visualization')
+    # make savefig not overwrite existing files
+    
+    
+    filename = 'multvae_TSNE.png'
+    counter = 1
+    while os.path.exists(filename):
+        filename = f'multvae_TSNE_{counter}.png'
         counter += 1
     plt.savefig(filename, dpi=300, bbox_inches='tight')
 

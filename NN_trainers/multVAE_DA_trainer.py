@@ -33,10 +33,10 @@ def log_likelihood(y, mu, logvar):
     )
 
 # input -> 500 -> 200 (latent) -> output
-# testen von BAcc auf MultVAE (ohne CLUB)
-# PCA auf MultVAE oder t-SNE, UMAP
-# erste 10-20 epochen ohne CLUB
-# domain encoder balanced accuracy track
+# testen von BAcc auf MultVAE (ohne CLUB) DONE
+# PCA auf MultVAE oder t-SNE, UMAP DONE
+# erste 10-20 epochen ohne CLUB ANNEALING DONE
+# domain encoder balanced accuracy track DONE
 
 def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False, latent_dim_domain=100):
     print("Training multVAE with domain adaptation...")
