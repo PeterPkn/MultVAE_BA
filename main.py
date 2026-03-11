@@ -49,7 +49,7 @@ if __name__ == "__main__":
             for idx, fold in enumerate(train_loader):
                 print("Fold ", idx)
                 epochs = args.epochs
-                train_multvae(epochs=epochs, train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=0.2, small_model=args.small_model)
+                train_multvae(epochs=epochs, train_user_info=train_user_info[idx], train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=0.2, small_model=args.small_model)
 
     elif args.multvae_da:
         train_loader, val_loader, test_loader, train_user_info = get_ml1m_dataloaders()

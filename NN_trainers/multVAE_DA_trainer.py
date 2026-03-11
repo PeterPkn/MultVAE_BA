@@ -153,10 +153,10 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
             # for each sample:
             # calculate log q(yi|xi)
-            #sample_z_featureoptim = reparameterize(mu=mu_featureoptim, logvar=logvar_featureoptim)
+            sample_z_featureoptim = reparameterize(mu=mu_featureoptim, logvar=logvar_featureoptim)
             #sample_domain_z_featureoptim = reparameterize(mu=mu_domain_featureoptim, logvar=logvar_domain_featureoptim)
             target_domain_featureoptim = mu_domain_featureoptim.detach()
-            domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(mu_featureoptim)
+            domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(sample_z_featureoptim)
             batch_size = mu_featureoptim.shape[0]
 
             z_expanded = target_domain_featureoptim.unsqueeze(1)
