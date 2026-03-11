@@ -369,7 +369,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
     # check performance on test set after training is complete
     if test_loader is not None:
-        #model.eval()
+        model.eval()
         batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])
         with torch.no_grad():
             for (data, targets, _) in test_loader:
