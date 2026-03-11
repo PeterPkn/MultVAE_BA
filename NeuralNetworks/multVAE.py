@@ -24,6 +24,7 @@ class MultVAE(nn.Module):
         if len(self.dec_dims) > 1:
             self.decoder.append(nn.Tanh())
         for i in range(len(self.dec_dims) - 1):
+            self.decoder.append(nn.Tanh())
             self.decoder.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
         
     def encoder_forward(self, x):

@@ -78,6 +78,8 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
 
     features_for_pca = []
     lables_for_visual = []
+    model.load_state_dict(best_model)  # Load the best model weights before extracting features
+    model.eval()
     for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
             _, mu, logvar = model(x_data)
@@ -89,25 +91,15 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
 
     # visualize PCA with gender variable
     num_men = sum(lables_for_visual)
-    majority_class_percentage = num_men / len(lables_for_visual)
+    features_len = len(lables_for_visual)
     #lables_for_visual = [[1, 0] if x == 0 else [0, 1] for x in lables_for_visual]
 
     features_for_pca = np.array(features_for_pca, dtype=np.float32)
     lables_for_visual = np.array(lables_for_visual, dtype=np.float64)
 
-    #print(lables_for_visual[0:10])
-
-    features_len = features_for_pca.shape[0]
-
-    features_train = features_for_pca[0:features_len-1000]
-    lables_train = lables_for_visual[0:features_len-1000]
-
-    indices = np.random.permutation(len(features_train))
-    features_train = features_train[indices]
-    lables_train = lables_train[indices]
-
-    features_test = features_for_pca[features_len-1000:]
-    lables_test = lables_for_visual[features_len-1000:]
+    #create train test split for adversarial network
+    from sklearn.model_selection import train_test_split
+    features_train, features_test, lables_train, lables_test = train_test_split(features_for_pca, lables_for_visual, test_size=0.2, stratify=lables_for_visual)
 
     np.save('features_for_advnet_multvae', features_for_pca)
     np.save('labeles_for_advnet_multvae', lables_for_visual)
@@ -194,7 +186,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     plt.colorbar(scatter, label='Class Labels')
     plt.xlabel('Principal Component 1')
     plt.ylabel('Principal Component 2')
-    plt.title('PCA Visualization')
+    plt.title(f'PCA Visualization multVAE, epochs: {epochs}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}, best_ndcg@10: {best_result:.4f}')
     # make savefig not overwrite existing files
     
     

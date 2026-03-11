@@ -24,7 +24,7 @@ class MultVAE_DA(nn.Module):
         self.logvar_layer = nn.Linear(self.enc_dims[-1], latent_dim)
 
         self.decoder = nn.ModuleList()
-        self.decoder.append(nn.Linear(self.latent_dim + self.latent_dim_domain, self.dec_dims[0]))
+        self.decoder.append(nn.Linear(self.latent_dim, self.dec_dims[0]))
         for i in range(len(self.dec_dims) - 1):
             self.decoder.append(nn.Tanh())
             self.decoder.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
@@ -79,8 +79,7 @@ class MultVAE_DA(nn.Module):
         eps = torch.randn_like(std)
         return mu + eps * std
     
-    def decoder_forward(self, z, z_domain):
-        z = torch.cat([z, z_domain], dim=1)
+    def decoder_forward(self, z):
         for layer in self.decoder:
             z = layer(z)
         return z
@@ -96,8 +95,6 @@ class MultVAE_DA(nn.Module):
         z = self.reparameterize(mu, logvar)
         z_domain = self.reparameterize(mu_domain, logvar_domain)
         domain_prediction = self.decoder_forward_domain(z_domain)
-        if not self.training:
-            z_domain = torch.zeros_like(z_domain)  # Set domain latent variable to zero during inference
-        recon_x = self.decoder_forward(z, z_domain)
+        recon_x = self.decoder_forward(z)
         
         return recon_x, mu, logvar, domain_prediction, mu_domain, logvar_domain
