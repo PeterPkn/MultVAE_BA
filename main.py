@@ -59,7 +59,7 @@ if __name__ == "__main__":
             test_loader = torch.utils.data.ConcatDataset(test_loader)
             train_user_info = pd.concat(train_user_info, ignore_index=True)
             #print(len(train_loader))
-            train_multvae_da(epochs=epochs, train_loader=DataLoader(train_loader, batch_size=args.batch_size, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader, batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader, batch_size=args.batch_size, shuffle=False), anneal_steps=len(train_loader)*45, anneal_cap=0.2, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias)
+            train_multvae_da(epochs=epochs, train_loader=DataLoader(train_loader, batch_size=args.batch_size, shuffle=True), train_user_info=train_user_info, val_loader=DataLoader(val_loader, batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader, batch_size=args.batch_size, shuffle=False), anneal_steps=len(train_loader)*45, anneal_cap=0.2, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias, latent_dim_domain=2)
             
         else:
             for idx, fold in enumerate(train_loader):
