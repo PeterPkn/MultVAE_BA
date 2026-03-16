@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 *.npy
 *.pth
+*.png

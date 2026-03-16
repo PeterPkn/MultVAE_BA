@@ -16,10 +16,10 @@ def reparameterize(mu, logvar):
     return mu + eps * std
 
 
-def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_info=None, anneal_steps=10000, anneal_cap=0.8, small_model=False):
+def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_info=None, val_user_info=None, test_user_info=None, anneal_steps=10000, anneal_cap=0.8, small_model=False):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    standard_model = [3416, 600, 200]
-    small_model_dim = [3416, 500]
+    standard_model = [train_loader.dataset.num_items, 600, 200]
+    small_model_dim = [train_loader.dataset.num_items, 500]
     model = MultVAE(standard_model, latent_dim=200, dropout=0.5, training=True)
     if small_model:
             model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=0.5, training=True)
@@ -86,7 +86,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
             #sample_z = reparameterize(mu=mu, logvar=logvar)
             #sample_z = sample_z.to(device)
             features_for_pca.extend(mu.cpu().detach().numpy().tolist())
-            lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].map({'M': 1, 'F': 0}).tolist())
+            lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].tolist())
 
 
     # visualize PCA with gender variable

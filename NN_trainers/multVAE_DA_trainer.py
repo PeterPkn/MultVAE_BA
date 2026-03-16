@@ -32,19 +32,86 @@ def log_likelihood(y, mu, logvar):
         dim=1
     )
 
+def adv_net_testing(features, labels, device, latent_dim, label):
+    num_men = sum(labels)
+    features_len = len(labels)
+    #lables_for_visual = [[1, 0] if x == 0 else [0, 1] for x in lables_for_visual]
+
+    features = np.array(features, dtype=np.float32)
+    lables = np.array(labels, dtype=np.float64)
+
+    #create train test split for adversarial network
+    from sklearn.model_selection import train_test_split
+    features_train, features_test, lables_train, lables_test = train_test_split(features, lables, test_size=0.2, stratify=lables)
+
+    np.save('features_for_advnet_multvae_da', features)
+    np.save('labeles_for_advnet_multvae_da', lables)
+
+    # TRAIN ADV-net
+
+    adv_model = ADV_net(latent_dim, 100)
+    adv_optim = optim.Adam(
+        adv_model.parameters(),
+        lr=1e-3,
+        weight_decay=0.0
+    )
+
+    weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
+    weights = weights.to(device)
+    adv_loss = nn.CrossEntropyLoss(weights)
+
+
+    #print(features_train.shape)
+    #print(lables_train.shape)
+    adv_model.to(device)
+    for _ in range(100):
+        for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
+            
+            x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
+            y_data = torch.from_numpy(lables_train[batch*128:np.min([batch*128+128, features_train.shape[0]])]).long()
+
+            x_data = x_data.to(device)
+            y_data = y_data.to(device)
+
+            #print(x_data.type())
+            #print(y_data.type())
+
+            adv_optim.zero_grad()
+            predictions = adv_model(x_data)
+            #print(F.softmax(predictions)[0])
+            #print(predictions.type())
+            loss = adv_loss(predictions, y_data)
+
+            loss.backward()
+            adv_optim.step()
+    b_acc = 0.0
+    with torch.no_grad():
+        features_test = torch.from_numpy(features_test).to(device)
+        predictions_test = adv_model(features_test)
+        from sklearn.metrics import balanced_accuracy_score
+
+        # After training, get all test predictions
+        all_preds = torch.argmax(predictions_test, dim=1).cpu().numpy()
+        all_true = lables_test #torch.argmax(torch.from_numpy(lables_test), dim=1).numpy()
+
+        b_acc = balanced_accuracy_score(all_true, all_preds)
+        #print(f"Standardized Balanced Accuracy for {label}: {b_acc}")
+
+    return b_acc
+        # 0.5 is random chance, 1.0 is perfect bias, 0.0 is perfectly wrong
 # input -> 500 -> 200 (latent) -> output
 # testen von BAcc auf MultVAE (ohne CLUB) DONE
 # PCA auf MultVAE oder t-SNE, UMAP DONE
 # erste 10-20 epochen ohne CLUB ANNEALING DONE
 # domain encoder balanced accuracy track DONE
 
-def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5000.0, prioritize_bias=False, latent_dim_domain=200):
-    print("Training multVAE with domain adaptation...")
-    print(f"Club weight: {club_weight}, Anneal steps: {anneal_steps}, Anneal cap: {anneal_cap}")
+def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5.0, prioritize_bias=False, latent_dim_domain=200):
+    #print("Training multVAE with domain adaptation...")
+    #print(f"Club weight: {club_weight}, Anneal steps: {anneal_steps}, Anneal cap: {anneal_cap}")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
-
-    model = MultVAE_DA([3416, 600, 200], latent_dim=latent_dim, dropout=0.5, training=True, latent_dim_domain=latent_dim_domain)
+    #print(f"Input size: {train_loader.dataset.num_items}, Latent dim: {latent_dim}, Domain Latent dim: {latent_dim_domain}")
+    model = MultVAE_DA([train_loader.dataset.num_items, 600, 200], latent_dim=latent_dim, dropout=0.5, training=True, latent_dim_domain=latent_dim_domain)
     mi_model = MI_net(200, 300, latent_dim_domain)
     mi_model.to(device)
     model.to(device)
@@ -83,20 +150,20 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     )
 
     #train_user_info['gender'].map({'M': 1, 'F': 0})
-    men_count = train_user_info['gender'].value_counts().get('M', 0)
+    men_count = train_user_info['gender'].sum()
     all_count = len(train_user_info)
     weights = torch.tensor([(men_count/all_count)/(1-(men_count/all_count)), 1.0], device=device, dtype=torch.float32)  # Adjust weights for each class if needed
 
     domain_loss = nn.CrossEntropyLoss(weight=weights)
 
-    print('Starting training...')
-    best_result = 0.0
+    #print('Starting training...')
+    best_result = 100.0 if prioritize_bias else 0.0
     best_epoch = 0
     best_model = None
     last_model = None
     features_for_pca = []
     lables_for_visual = []
-    for j in tqdm(range(epochs)):
+    for j in range(epochs):
         avg_gender_loss = 0.0
         bound_sum = 0.0
         kld_sum = 0.0
@@ -206,9 +273,9 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             _, _, _, domain_predictions_domainoptim, mu_domain_domainoptim, logvar_domain_domainoptim = model(x_data) # 0 is female, 1 is male
             real_domain = train_user_info.iloc[idx.numpy()]
             gender_map = {'M': 1, 'F': 0}
-            gender_array = real_domain['gender'].map(gender_map).to_numpy()
+            gender_array = real_domain['gender'].to_numpy()  #.map(gender_map).to_numpy()
             #lables_for_visual.extend(gender_array)
-            gender_tensor = torch.from_numpy(gender_array.copy())
+            gender_tensor = torch.from_numpy(gender_array.copy()).long()
             gender_tensor = gender_tensor.to(device)
 
             #print(domain_predictions_domainoptim.type())
@@ -225,8 +292,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             
             loss.backward()
             domain_optim.step()
-        print(f"\nEpoch {j+1}, Batch MI Bound: {bound_sum/len(train_loader):.4f}, KLD: {kld_sum/len(train_loader):.4f}, MLL: {mll_sum/len(train_loader):.4f}, anneal: {anneal:.4f}, club_anneal: {(club_anneal * club_weight):.4f}")
-        print(f'Average gender prediction loss after epoch {j+1}: {avg_gender_loss/len(train_loader):.4f}')
+        #print(f"\nEpoch {j+1}, Batch MI Bound: {bound_sum/len(train_loader):.4f}, KLD: {kld_sum/len(train_loader):.4f}, MLL: {mll_sum/len(train_loader):.4f}, anneal: {anneal:.4f}, club_anneal: {(club_anneal * club_weight):.4f}")
+        #print(f'Average gender prediction loss after epoch {j+1}: {avg_gender_loss/len(train_loader):.4f}')
             
 
             #if i % 20 == 19:               
@@ -236,28 +303,40 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             model.eval()
             batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])
             with torch.no_grad():
-                for (data, targets, _) in val_loader:
+                for (data, targets, val_idx) in val_loader:
                     len_batch = data.size(0)
                     data = data.to(device)
-                    recon_batch_val, _, _, _, _, _ = model(data)
+                    recon_batch_val, mu, _, _, _, _ = model(data)
                     recon_batch_val = recon_batch_val - (1000 * data)
                     batch_evaluator.eval_batch(np.arange(len_batch), recon_batch_val.cpu(), targets.cpu())
+                    features_for_pca.extend(mu.cpu().detach().numpy().tolist())
+                    lables_for_visual.extend(val_user_info.iloc[val_idx.numpy()]['gender'].tolist())
                 result = batch_evaluator.get_results()
                 #print(f'Validation Metrics after epoch {j+1}: {result.aggregated_metrics}')
-                if result.aggregated_metrics['ndcg@10'] > best_result:  # Example threshold for early stopping
+                if result.aggregated_metrics['ndcg@10'] > best_result and not prioritize_bias:  # Example threshold for early stopping
                     best_result = result.aggregated_metrics['ndcg@10']
                     best_epoch = j+1
                     best_model = model.state_dict()  # Save the best model weights
                     #print(f'New best model found at epoch {j+1} with NDCG@10: {best_result:.4f}')
+            b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Validation Set")
+
+            if abs(b_acc-0.5) < abs(best_result-0.5) and prioritize_bias and j+1 > epochs/3:  # If bias prediction is too good, save model and stop training
+                print(f"New lowest bias: {b_acc} at epoch {j+1}")
+                best_result = b_acc
+                best_epoch = j+1
+                best_model = model.state_dict()  # Save the best model weights
+
+            features_for_pca = []
+            lables_for_visual = []
             model.train()
 
     last_model = model.state_dict()  # Save the last model weights after training is complete
 
     # get some random samples from the latent space to train the adversarial network on
-    print(f"Best epoch: {best_epoch}")
+   #f"Best epoch: {best_epoch}")
     model.load_state_dict(best_model)  # Load the best model weights before extracting features
     if prioritize_bias:
-        print("Prioritizing bias in feature extraction by loading the last model weights...")
+        #print("Prioritizing bias in feature extraction by loading the last model weights...")
         model.load_state_dict(last_model)  # Load the last model weights if prioritizing bias
     model.eval()
     for _, (x_data, _, idx) in enumerate(train_loader):
@@ -266,78 +345,18 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
             #sample_z = reparameterize(mu=mu, logvar=logvar)
             #sample_z = sample_z.to(device)
             features_for_pca.extend(mu.cpu().detach().numpy().tolist())
-            lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].map({'M': 1, 'F': 0}).tolist())
+            lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].tolist())
 
-
-    num_men = sum(lables_for_visual)
-    features_len = len(lables_for_visual)
-    #lables_for_visual = [[1, 0] if x == 0 else [0, 1] for x in lables_for_visual]
-
-    features_for_pca = np.array(features_for_pca, dtype=np.float32)
-    lables_for_visual = np.array(lables_for_visual, dtype=np.float64)
-
-    #create train test split for adversarial network
-    from sklearn.model_selection import train_test_split
-    features_train, features_test, lables_train, lables_test = train_test_split(features_for_pca, lables_for_visual, test_size=0.2, stratify=lables_for_visual)
-
-    np.save('features_for_advnet_multvae_da', features_for_pca)
-    np.save('labeles_for_advnet_multvae_da', lables_for_visual)
-
-    # TRAIN ADV-net
-
-    adv_model = ADV_net(200, 100)
-    adv_optim = optim.Adam(
-        adv_model.parameters(),
-        lr=1e-3,
-        weight_decay=0.0
-    )
-
-    weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
-    weights = weights.to(device)
-    adv_loss = nn.CrossEntropyLoss(weights)
-
-
-    #print(features_train.shape)
-    #print(lables_train.shape)
-    adv_model.to(device)
-    for _ in tqdm(range(100)):
-        for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
-            
-            x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
-            y_data = torch.from_numpy(lables_train[batch*128:np.min([batch*128+128, features_train.shape[0]])]).long()
-
-            x_data = x_data.to(device)
-            y_data = y_data.to(device)
-
-            #print(x_data.type())
-            #print(y_data.type())
-
-            adv_optim.zero_grad()
-            predictions = adv_model(x_data)
-            #print(F.softmax(predictions)[0])
-            #print(predictions.type())
-            loss = adv_loss(predictions, y_data)
-
-            loss.backward()
-            adv_optim.step()
-    b_acc = 0.0
-    with torch.no_grad():
-        features_test = torch.from_numpy(features_test).to(device)
-        predictions_test = adv_model(features_test)
-        from sklearn.metrics import balanced_accuracy_score
-
-        # After training, get all test predictions
-        all_preds = torch.argmax(predictions_test, dim=1).cpu().numpy()
-        all_true = lables_test #torch.argmax(torch.from_numpy(lables_test), dim=1).numpy()
-
-        b_acc = balanced_accuracy_score(all_true, all_preds)
-        print(f"Standardized Balanced Accuracy: {b_acc}")
-        # 0.5 is random chance, 1.0 is perfect bias, 0.0 is perfectly wrong
+    b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Training Set")
+    print(f"Final Balanced Accuracy for bias prediction on Training Set: {b_acc:.4f}")
     # TODO: train user etc. blabblablabla
 
 
-    print(features_for_pca.shape)
-    print(lables_for_visual.shape)
+    #print(features_for_pca.shape)
+    #print(lables_for_visual.shape)
+
+    features_for_pca = np.array(features_for_pca, dtype=np.float32)
+    lables_for_visual = np.array(lables_for_visual, dtype=np.float64)
 
     #create random sample of 200 features for PCA visualization
     index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(1000)])
@@ -367,22 +386,29 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     #plt.show()
 
+    features_for_pca = []
+    lables_for_visual = []
     # check performance on test set after training is complete
-    if test_loader is not None:
+    if test_loader is not None and test_user_info is not None:
         model.eval()
         batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])
         with torch.no_grad():
-            for (data, targets, _) in test_loader:
+            for (data, targets, test_idx) in test_loader:
                 len_batch = data.size(0)
                 data = data.to(device)
                 recon_batch, mu, logvar, _, _, _ = model(data)
                 recon_batch = recon_batch - (1000 * data)
                 batch_evaluator.eval_batch(np.arange(len_batch), recon_batch.cpu(), targets.cpu())
+                features_for_pca.extend(mu.cpu().detach().numpy().tolist())
+                lables_for_visual.extend(test_user_info.iloc[test_idx.numpy()]['gender'].tolist())
                 
             all_results = batch_evaluator.get_results().aggregated_metrics
-            print(f'Test Metrics: {all_results}')
-
+            #print(f'Test Metrics: {all_results}')
+        
+        b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Test Set")
+        print(f"Final Balanced Accuracy for bias prediction on Test Set: {b_acc:.4f}")
+        print('-------------------------------')
     PATH = './ml1m_multvae_DA.pth'
     torch.save(model.state_dict(), PATH)
 
-    return b_acc, all_results["ndcg@10"]
+    return b_acc, all_results

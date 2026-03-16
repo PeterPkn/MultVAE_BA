@@ -16,7 +16,7 @@ def reparameterize(mu, logvar):
     return mu + eps * std
 
 
-def test(train_loader, test_loader=None, val_loader=None, train_user_info=None, small_model=False):
+def test(train_loader, test_loader=None, val_loader=None, train_user_info=None, val_user_info=None, test_user_info=None, small_model=False):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     standard_model = [3416, 600, 200]
     small_model_dim = [3416, 500]

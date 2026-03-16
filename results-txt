@@ -1,0 +1,184 @@
+ALL RUNS WITH 200 LATENT DIMENSION FOR DOMAIN ENCODER, PRIORITIZE_BIAS FLAG SET, 120 EPOCHS, BATCH SIZE 512
+
+--multvae_da --epochs 120 --club_weight 1.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.7396806744632831
+Standardized Balanced Accuracy: 0.738074527190078
+Standardized Balanced Accuracy: 0.6703078120846151
+Standardized Balanced Accuracy: 0.7126522251529266
+Standardized Balanced Accuracy: 0.7053706717548685
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.7132
+Average NDCG@10 across folds: 0.3258
+
+--multvae_da --epochs 120 --club_weight 10.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.6725514334209987
+Standardized Balanced Accuracy: 0.6564996165142076
+Standardized Balanced Accuracy: 0.5539857962097907
+Standardized Balanced Accuracy: 0.6536608863198459
+Standardized Balanced Accuracy: 0.6290008792113287
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6331
+Average NDCG@10 across folds: 0.2929
+
+--multvae_da --epochs 120 --club_weight 15.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.5551591964635443
+Standardized Balanced Accuracy: 0.5666376713994425
+Standardized Balanced Accuracy: 0.5955337814743078
+Standardized Balanced Accuracy: 0.5933928203977028
+Standardized Balanced Accuracy: 0.6183287502104495
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5858
+Average NDCG@10 across folds: 0.2688
+
+--multvae_da --epochs 120 --club_weight 20.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.6358765597896032
+Standardized Balanced Accuracy: 0.591840170604411
+Standardized Balanced Accuracy: 0.6458357069613763
+Standardized Balanced Accuracy: 0.6018856277007689
+Standardized Balanced Accuracy: 0.5957825916156911
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6142
+Average NDCG@10 across folds: 0.2989
+
+--multvae_da --epochs 120 --club_weight 25.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.49951037994516256
+Standardized Balanced Accuracy: 0.6162008717286791
+Standardized Balanced Accuracy: 0.6379647563708177
+Standardized Balanced Accuracy: 0.6279860448584844
+Standardized Balanced Accuracy: 0.6066043736086948
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5977
+Average NDCG@10 across folds: 0.2497
+
+--multvae_da --epochs 120 --club_weight 30.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.5014502079719471
+Standardized Balanced Accuracy: 0.5860457938155901
+Standardized Balanced Accuracy: 0.6061391515703923
+Standardized Balanced Accuracy: 0.6341919673756478
+Standardized Balanced Accuracy: 0.6298613839160447
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5915
+Average NDCG@10 across folds: 0.2729
+
+--multvae_da --epochs 120 --club_weight 40.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.6261867457519631
+Standardized Balanced Accuracy: 0.5894503993864226
+Standardized Balanced Accuracy: 0.6383018115529224
+Standardized Balanced Accuracy: 0.6259236395607685
+Standardized Balanced Accuracy: 0.6049768973193408
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6170
+Average NDCG@10 across folds: 0.2888
+
+--multvae_da --epochs 120 --club_weight 60.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.6885456885456885
+Standardized Balanced Accuracy: 0.6314280636773482
+Standardized Balanced Accuracy: 0.6190469408681782
+Standardized Balanced Accuracy: 0.5262968367098789
+Standardized Balanced Accuracy: 0.5875376470808313
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6106
+Average NDCG@10 across folds: 0.2720
+
+--multvae_da --epochs 120 --club_weight 80.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.6083925540447279
+Standardized Balanced Accuracy: 0.6136240342705352
+Standardized Balanced Accuracy: 0.5943849455015001
+Standardized Balanced Accuracy: 0.5899414482668313
+Standardized Balanced Accuracy: 0.5703556129225359
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5953
+Average NDCG@10 across folds: 0.2524
+
+--multvae_da --epochs 120 --club_weight 100.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.5900621118012422
+Standardized Balanced Accuracy: 0.6016143816525432
+Standardized Balanced Accuracy: 0.5947125061714329
+Standardized Balanced Accuracy: 0.6598901921170286
+Standardized Balanced Accuracy: 0.6725779598555848
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6238
+Average NDCG@10 across folds: 0.2406
+
+--multvae_da --epochs 120 --club_weight 120.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.6059397907223995
+Standardized Balanced Accuracy: 0.5951933329592008
+Standardized Balanced Accuracy: 0.7638097679541225
+Standardized Balanced Accuracy: 0.6129973623660138
+Standardized Balanced Accuracy: 0.5869858016723721
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6330
+Average NDCG@10 across folds: 0.2708
+
+--multvae_da --epochs 120 --club_weight 150.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.6190989125771734
+Standardized Balanced Accuracy: 0.5465093439586958
+Standardized Balanced Accuracy: 0.592543010140139
+Standardized Balanced Accuracy: 0.5793534990740221
+Standardized Balanced Accuracy: 0.5033063957947509
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5682
+Average NDCG@10 across folds: 0.2567
+
+--multvae_da --epochs 120 --club_weight 200.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.5783905023035458
+Standardized Balanced Accuracy: 0.5697663542660456
+Standardized Balanced Accuracy: 0.5
+Standardized Balanced Accuracy: 0.5982986325457844
+Standardized Balanced Accuracy: 0.5686673401051312
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5630
+Average NDCG@10 across folds: 0.2407
+
+--multvae_da --epochs 120 --club_weight 300.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.6185719881372056
+Standardized Balanced Accuracy: 0.6756037562901023
+Standardized Balanced Accuracy: 0.5695093236109529
+Standardized Balanced Accuracy: 0.6665076603625344
+Standardized Balanced Accuracy: 0.5264839029500346
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6113
+Average NDCG@10 across folds: 0.2638
+
+--multvae_da --epochs 120 --club_weight 400.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.5838229533881708
+Standardized Balanced Accuracy: 0.6549095534728848
+Standardized Balanced Accuracy: 0.5
+Standardized Balanced Accuracy: 0.6051873468395159
+Standardized Balanced Accuracy: 0.6556110518734684
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5999
+Average NDCG@10 across folds: 0.2325
+
+--multvae_da --epochs 120 --club_weight 500.0 --prioritize_bias --batch_size 512
+Standardized Balanced Accuracy: 0.5118254900863597
+Standardized Balanced Accuracy: 0.5383672858559216
+Standardized Balanced Accuracy: 0.609167900953249
+Standardized Balanced Accuracy: 0.6939830143853939
+Standardized Balanced Accuracy: 0.6680836934358456
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6043
+Average NDCG@10 across folds: 0.2452
+
+---------------------------------------------------------------------------------------------------------------------
+
+--multvae_da --epochs 200 --latent_dim_domain 2 --club_weight 7.0 --prioritize_bias --batch_size 1100
+Standardized Balanced Accuracy: 0.6976899259507955
+Standardized Balanced Accuracy: 0.6012262192042203
+Standardized Balanced Accuracy: 0.6489071816490068
+Standardized Balanced Accuracy: 0.6690985277886901
+Standardized Balanced Accuracy: 0.6191799016031576
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6472
+Average NDCG@10 across folds: 0.3235
+
+--multvae_da --epochs 200 --latent_dim_domain 2 --club_weight 5.0 --batch_size 1100                   
+Standardized Balanced Accuracy: 0.6894689720776677
+Standardized Balanced Accuracy: 0.6479553659950988
+Standardized Balanced Accuracy: 0.6455651133644753
+Standardized Balanced Accuracy: 0.6859017528106702
+Standardized Balanced Accuracy: 0.6623688197990909
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6663
+Average NDCG@10 across folds: 0.3224
+
+--multvae_da --epochs 200 --latent_dim_domain 200 --club_weight 5.0 --batch_size 1100 --prioritize_bias
+Final Balanced Accuracy for bias prediction on Training Set: 0.6813
+Final Balanced Accuracy for bias prediction on Test Set: 0.6559
+-------------------------------
+Final Balanced Accuracy for bias prediction on Training Set: 0.6391
+Final Balanced Accuracy for bias prediction on Test Set: 0.5428
+-------------------------------
+Final Balanced Accuracy for bias prediction on Training Set: 0.6863
+Final Balanced Accuracy for bias prediction on Test Set: 0.6257
+-------------------------------
+Final Balanced Accuracy for bias prediction on Training Set: 0.6237
+Final Balanced Accuracy for bias prediction on Test Set: 0.5511
+-------------------------------
+Final Balanced Accuracy for bias prediction on Training Set: 0.6467
+Final Balanced Accuracy for bias prediction on Test Set: 0.5658
+-------------------------------
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5883
+Average NDCG@10 across folds: 0.3141
