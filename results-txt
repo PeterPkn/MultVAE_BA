@@ -182,3 +182,25 @@ Final Balanced Accuracy for bias prediction on Test Set: 0.5658
 -------------------------------
 Average Balanced Accuracy on Bias Prediction Task across folds: 0.5883
 Average NDCG@10 across folds: 0.3141
+
+--multvae --epochs 70 --batch_size 1000 --dataset ekstrabladet
+Sklearn BAcc: 0.711809666084146
+Standardized Balanced Accuracy: 0.6495269368810719
+Test Metrics: {'ndcg@10': 0.20306722819805145, 'ndcg@10_std': 0.20711025595664978, 'ndcg@50': 0.17057989537715912, 'ndcg@50_std': 0.1310463845729828, 'recall@10': 0.04002697765827179, 'recall@10_std': 0.06421982496976852, 'recall@50': 0.12333744019269943, 'recall@50_std': 0.10399068892002106}
+Sklearn BAcc: 0.7384930759701962
+Standardized Balanced Accuracy: 0.6658023184868822
+Test Metrics: {'ndcg@10': 0.1981671005487442, 'ndcg@10_std': 0.2043885588645935, 'ndcg@50': 0.16932818293571472, 'ndcg@50_std': 0.13028015196323395, 'recall@10': 0.03864645957946777, 'recall@10_std': 0.06109793856739998, 'recall@50': 0.12227483093738556, 'recall@50_std': 0.09750818461179733}
+
+
+--multvae --epochs 70 --batch_size 500 --dataset lfm-demobias
+Standardized Balanced Accuracy: 0.6222787648783854
+Test Metrics: {'ndcg@10': 0.09609361737966537, 'ndcg@10_std': 0.1413791924715042, 'ndcg@50': 0.10521712899208069, 'ndcg@50_std': 0.11051803827285767, 'recall@10': 0.04445489123463631, 'recall@10_std': 0.09593120962381363, 'recall@50': 0.1284191608428955, 'recall@50_std': 0.15312954783439636}
+Standardized Balanced Accuracy: 0.637294235617812
+Test Metrics: {'ndcg@10': 0.09453032165765762, 'ndcg@10_std': 0.13925901055335999, 'ndcg@50': 0.10396786779165268, 'ndcg@50_std': 0.10892835259437561, 'recall@10': 0.042848460376262665, 'recall@10_std': 0.09410809725522995, 'recall@50': 0.1273336112499237, 'recall@50_std': 0.154558464884758}
+Standardized Balanced Accuracy: 0.6353514367944042
+Test Metrics: {'ndcg@10': 0.09449440240859985, 'ndcg@10_std': 0.13920244574546814, 'ndcg@50': 0.10315656661987305, 'ndcg@50_std': 0.10774867236614227, 'recall@10': 0.04638941213488579, 'recall@10_std': 0.10458078235387802, 'recall@50': 0.12848375737667084, 'recall@50_std': 0.15448959171772003}
+
+
+--multvae_da --epochs 200 --latent_dim_domain 200 --club_weight 5.0 --batch_size 512 --prioritize_bias --dataset ekstrabladet
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5614
+Average NDCG@10 across folds: 0.1760
