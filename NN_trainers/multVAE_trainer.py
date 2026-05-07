@@ -185,12 +185,15 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
         all_true = lables_test
 
         b_acc = balanced_accuracy_score(all_true, all_preds)
-        print(f"Standardized Balanced Accuracy: {b_acc}")
+        #print(f"Standardized Balanced Accuracy: {b_acc}")
 
     
 
     # check performance on test set after training is complete
     model.load_state_dict(best_model)  # Load the best model weights before testing
+    if store_model:
+        PATH = './ml1m_multvae.pth'
+        torch.save(model.state_dict(), PATH)
     if test_loader is not None:
         model.eval()
         batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])
@@ -202,10 +205,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
                 recon_batch = recon_batch - (1000 * data)
                 batch_evaluator.eval_batch(np.arange(len_batch), recon_batch.cpu(), targets.cpu())
                 
-            print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
-
-    if store_model:
-        PATH = './ml1m_multvae.pth'
-        torch.save(model.state_dict(), PATH)
-
-    return b_acc, batch_evaluator.get_results().aggregated_metrics if test_loader is not None else None
+            #print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
+            return b_acc, batch_evaluator.get_results().aggregated_metrics if test_loader is not None else None
+        
+    return b_acc, None
