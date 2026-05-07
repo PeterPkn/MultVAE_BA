@@ -15,8 +15,39 @@ def reparameterize(mu, logvar):
 
     return mu + eps * std
 
+def visualize_pca(features_for_pca, lables_for_visual, epochs, anneal_cap, b_acc, best_result):
+    #create random sample of 1000 features for PCA visualization
+    from sklearn.decomposition import PCA
+    from matplotlib import pyplot as plt
 
-def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_info=None, val_user_info=None, test_user_info=None, anneal_steps=10000, anneal_cap=0.8, small_model=False, dropout=0.5):
+    index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(1000)])
+    random_sample = features_for_pca[index]
+    random_label = lables_for_visual[index]
+
+    random_sample = random_sample.reshape(-1, random_sample.shape[-1]) #features_for_pca.reshape(-1, features_for_pca.shape[-1])
+    random_label = random_label.reshape(-1, random_label.shape[-1]) #lables_for_visual.reshape(-1, lables_for_visual.shape[-1])
+
+    pca = PCA(n_components=2)
+    reduced_features = pca.fit_transform(random_sample)
+
+    plt.figure(figsize=(10, 8))
+    scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=random_label, cmap='viridis', alpha=0.7)
+    plt.colorbar(scatter, label='Class Labels')
+    plt.xlabel('Principal Component 1')
+    plt.ylabel('Principal Component 2')
+    plt.title(f'PCA Visualization multVAE, epochs: {epochs}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}, best_ndcg@10: {best_result:.4f}')
+    # make savefig not overwrite existing files
+    
+    
+    filename = 'multvae_da_PCA.png'
+    counter = 1
+    while os.path.exists(filename):
+        filename = f'multvae_da_PCA_{counter}.png'
+        counter += 1
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+
+
+def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_info=None, val_user_info=None, test_user_info=None, anneal_steps=10000, anneal_cap=0.8, small_model=False, dropout=0.5, store_model=False):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     standard_model = [train_loader.dataset.num_items, 600, 200]
     small_model_dim = [train_loader.dataset.num_items, 500]
@@ -101,11 +132,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     from sklearn.model_selection import train_test_split
     features_train, features_test, lables_train, lables_test = train_test_split(features_for_pca, lables_for_visual, test_size=0.2, stratify=lables_for_visual)
 
-    np.save('features_for_advnet_multvae', features_for_pca)
-    np.save('labeles_for_advnet_multvae', lables_for_visual)
-
     # TRAIN ADV-net
-
     adv_model = ADV_net(200, 100)
     adv_optim = optim.Adam(
         adv_model.parameters(),
@@ -117,7 +144,6 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     weights = weights.to(device)
     adv_loss = torch.nn.CrossEntropyLoss(weights)
 
-    from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import StandardScaler
     from sklearn.metrics import balanced_accuracy_score
 
@@ -126,20 +152,15 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     X_train_scaled = scaler.fit_transform(features_train)
     X_test_scaled = scaler.transform(features_test)
 
-    # Use a simple Sklearn Logistic Regression
-    clf = LogisticRegression(class_weight='balanced', max_iter=1000)
-    clf.fit(X_train_scaled, lables_train)
-    sk_preds = clf.predict(X_test_scaled)
-    print(f"Sklearn BAcc: {balanced_accuracy_score(lables_test, sk_preds)}")
-
-        #print(features_train.shape)
-        #print(lables_train.shape)
     adv_model.to(device)
     for _ in tqdm(range(100)):
-        for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
+        permuted_indices = np.random.permutation(X_train_scaled.shape[0])
+        training_samples = X_train_scaled[permuted_indices]
+        training_labels = lables_train[permuted_indices]
+        for batch in range(np.ceil(X_train_scaled.shape[0]/128).astype(int)):
             
-            x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
-            y_data = torch.from_numpy(lables_train[batch*128:np.min([batch*128+128, features_train.shape[0]])]).long()
+            x_data = torch.from_numpy(training_samples[batch*128:np.min([batch*128+128, training_samples.shape[0]])])
+            y_data = torch.from_numpy(training_labels[batch*128:np.min([batch*128+128, training_labels.shape[0]])]).long()
 
             x_data = x_data.to(device)
             y_data = y_data.to(device)
@@ -157,45 +178,16 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
             adv_optim.step()
     b_acc = 0.0
     with torch.no_grad():
-        features_test = torch.from_numpy(features_test).to(device)
-        predictions_test = adv_model(features_test)
+        X_test_scaled = torch.from_numpy(X_test_scaled).to(device)
+        predictions_test = adv_model(X_test_scaled)
 
-        # After training, get all test predictions
         all_preds = torch.argmax(predictions_test, dim=1).cpu().numpy()
-        all_true = lables_test #torch.argmax(torch.from_numpy(lables_test), dim=1).numpy()
+        all_true = lables_test
 
         b_acc = balanced_accuracy_score(all_true, all_preds)
         print(f"Standardized Balanced Accuracy: {b_acc}")
 
-    #create random sample of 1000 features for PCA visualization
-    from sklearn.decomposition import PCA
-    from matplotlib import pyplot as plt
-
-    index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(1000)])
-    random_sample = features_for_pca[index]
-    random_label = lables_for_visual[index]
-
-    random_sample = random_sample.reshape(-1, random_sample.shape[-1]) #features_for_pca.reshape(-1, features_for_pca.shape[-1])
-    random_label = random_label.reshape(-1, random_label.shape[-1]) #lables_for_visual.reshape(-1, lables_for_visual.shape[-1])
-
-    pca = PCA(n_components=2)
-    reduced_features = pca.fit_transform(random_sample)
-
-    plt.figure(figsize=(10, 8))
-    scatter = plt.scatter(reduced_features[:, 0], reduced_features[:, 1], c=random_label, cmap='viridis', alpha=0.7)
-    plt.colorbar(scatter, label='Class Labels')
-    plt.xlabel('Principal Component 1')
-    plt.ylabel('Principal Component 2')
-    plt.title(f'PCA Visualization multVAE, epochs: {epochs}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}, best_ndcg@10: {best_result:.4f}')
-    # make savefig not overwrite existing files
     
-    
-    filename = 'multvae_da_PCA.png'
-    counter = 1
-    while os.path.exists(filename):
-        filename = f'multvae_da_PCA_{counter}.png'
-        counter += 1
-    plt.savefig(filename, dpi=300, bbox_inches='tight')
 
     # check performance on test set after training is complete
     model.load_state_dict(best_model)  # Load the best model weights before testing
@@ -212,5 +204,8 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
                 
             print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
 
-    PATH = './ml1m_multvae.pth'
-    torch.save(model.state_dict(), PATH)
+    if store_model:
+        PATH = './ml1m_multvae.pth'
+        torch.save(model.state_dict(), PATH)
+
+    return b_acc, batch_evaluator.get_results().aggregated_metrics if test_loader is not None else None
