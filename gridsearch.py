@@ -7,16 +7,21 @@ import os
 
 # Import your existing modules
 from NN_trainers.multVAE_DA_trainer import train as train_multvae_da
+from NN_trainers.multVAE_trainer import train as train_multvae
 from DataLoaders.ML1M_loader import get_dataset_dataloaders
 
 def run_grid_search(args):
     # 1. Define the Hyperparameter Grid
     # You can easily add or modify parameters here
     param_grid = {
-    'club_weight': [2.0, 5.0, 10.0, 15.0, 20.0], 
-    'latent_dim_domain': [2, 50, 100, 200],
-    'prioritize_bias': [True, False],
-    'anneal_cap': [0.1, 0.2, 0.4, 0.8]
+    #'club_weight': [2.0, 5.0, 10.0, 15.0, 20.0], 
+    #'latent_dim_domain': [2, 50, 100, 200],
+    #'prioritize_bias': [True, False],
+    'anneal_cap': [0.1, 0.2, 0.4, 0.8],
+    'anneal_period': [30, 45, 60],
+    'batch_size': [128, 256, 512, 1024],
+    'epochs': [50, 100, 150],
+    'dropout': [0.0, 0.2, 0.4, 0.6]
     }
 
     keys = list(param_grid.keys())
@@ -51,20 +56,34 @@ def run_grid_search(args):
             val_user_info = val_info[fold]
             test_user_info = test_info[fold]
             # Execute training process with the current parameters
-            b_acc, metrics = train_multvae_da(
-                epochs=args.epochs,
-                train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True),
-                train_user_info=train_user_info,
-                val_user_info=val_user_info,
-                test_user_info=test_user_info,
-                val_loader=DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False),
-                test_loader=DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False),
-                anneal_steps=len(train_dataset) * 45,  # Matches the logic in main.py
-                anneal_cap=params['anneal_cap'],
-                club_weight=params['club_weight'],
-                prioritize_bias=params['prioritize_bias'],
-                latent_dim_domain=params['latent_dim_domain']
-            )
+            if args.noDA:
+                b_acc, metrics = train_multvae(
+                    epochs=params['epochs'],
+                    train_loader=DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True),
+                    train_user_info=train_user_info,
+                    val_user_info=val_user_info,
+                    test_user_info=test_user_info,
+                    val_loader=DataLoader(val_dataset, batch_size=params['batch_size'], shuffle=False),
+                    test_loader=DataLoader(test_dataset, batch_size=params['batch_size'], shuffle=False),
+                    anneal_steps=len(train_dataset) * params['anneal_period'],
+                    anneal_cap=params['anneal_cap'],
+                    dropout=params['dropout']
+                )
+            else:
+                b_acc, metrics = train_multvae_da(
+                    epochs=params['epochs'],
+                    train_loader=DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True),
+                    train_user_info=train_user_info,
+                    val_user_info=val_user_info,
+                    test_user_info=test_user_info,
+                    val_loader=DataLoader(val_dataset, batch_size=params['batch_size'], shuffle=False),
+                    test_loader=DataLoader(test_dataset, batch_size=params['batch_size'], shuffle=False),
+                    anneal_steps=len(train_dataset) * params['anneal_period'],
+                    anneal_cap=params['anneal_cap'],
+                    club_weight=params['club_weight'],
+                    prioritize_bias=params['prioritize_bias'],
+                    latent_dim_domain=params['latent_dim_domain']
+                )
             avg_b_acc += b_acc / 5.0  # Average over 5 folds
             if metrics and 'ndcg@10' in metrics:
                 avg_ndcg10 += metrics['ndcg@10'] / 5.0  # Average NDCG@10 over 5 folds

@@ -16,13 +16,13 @@ def reparameterize(mu, logvar):
     return mu + eps * std
 
 
-def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_info=None, val_user_info=None, test_user_info=None, anneal_steps=10000, anneal_cap=0.8, small_model=False):
+def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_info=None, val_user_info=None, test_user_info=None, anneal_steps=10000, anneal_cap=0.8, small_model=False, dropout=0.5):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     standard_model = [train_loader.dataset.num_items, 600, 200]
     small_model_dim = [train_loader.dataset.num_items, 500]
-    model = MultVAE(standard_model, latent_dim=200, dropout=0.5, training=True)
+    model = MultVAE(standard_model, latent_dim=200, dropout=dropout, training=True)
     if small_model:
-            model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=0.5, training=True)
+            model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=dropout, training=True)
     model.to(device)
     total_anneal_steps = anneal_steps  # Anneal over ~20-50 epochs depending on dataset size
     anneal_cap = anneal_cap
