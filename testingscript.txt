@@ -1,0 +1,28 @@
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 400 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset lfm-demobias --anneal_cap 0.4 --mi_estimator L1Out --dropout 0.2
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 400 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset lfm-demobias --anneal_cap 0.4 --mi_estimator CLUB --dropout 0.2
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 400 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset lfm-demobias --anneal_cap 0.4 --mi_estimator MINE --dropout 0.2
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 400 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset lfm-demobias --anneal_cap 0.4 --mi_estimator VUB --dropout 0.2
+
+
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ekstrabladed --anneal_cap 0.4 --mi_estimator L1Out --dropout 0.3
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ekstrabladed --anneal_cap 0.4 --mi_estimator CLUB --dropout 0.3
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ekstrabladed --anneal_cap 0.4 --mi_estimator MINE --dropout 0.3
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ekstrabladed --anneal_cap 0.4 --mi_estimator VUB --dropout 0.3
+
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ml-1m --anneal_cap 0.4 --mi_estimator L1Out  --dropout 0.5
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ml-1m --anneal_cap 0.4 --mi_estimator CLUB  --dropout 0.5
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ml-1m --anneal_cap 0.4 --mi_estimator MINE  --dropout 0.5
+
+& C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ml-1m --anneal_cap 0.4 --mi_estimator VUB  --dropout 0.5
+
+echo DONE!!!

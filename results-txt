@@ -204,3 +204,211 @@ Test Metrics: {'ndcg@10': 0.09449440240859985, 'ndcg@10_std': 0.1392024457454681
 --multvae_da --epochs 200 --latent_dim_domain 200 --club_weight 5.0 --batch_size 512 --prioritize_bias --dataset ekstrabladet
 Average Balanced Accuracy on Bias Prediction Task across folds: 0.5614
 Average NDCG@10 across folds: 0.1760
+
+Top 3 Configurations by NDCG@10 (if available):
+   club_weight  anneal_cap  latent_dim_domain  prioritize_bias  balanced_accuracy   ndcg@10  ndcg@10_std   ndcg@50  ndcg@50_std  recall@10  recall@10_std  recall@50  recall@50_std
+2          0.1         0.2                200            False           0.597523  0.326851     0.236968  0.341284     0.165727   0.137340       0.122546   0.359885       0.183298
+0          0.1         0.2                 50            False           0.645241  0.326340     0.224871  0.356904     0.156120   0.142849       0.122985   0.388078       0.185958
+6          1.0         0.2                200            False           0.642112  0.319023     0.223324  0.348182     0.158453   0.140530       0.122114   0.377843       0.188555
+
+
+
+
+--multvae_da --epochs 100 --batch_size 400 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset lfm-demobias --anneal_cap 0.4 --mi_estimator L1Out --dropout 0.2
+New lowest bias: 0.6341017488076311 at epoch 34
+New lowest bias: 0.6087440381558029 at epoch 36
+New lowest bias: 0.5870429252782194 at epoch 37
+New lowest bias: 0.5727344992050875 at epoch 47
+New lowest bias: 0.5554848966613672 at epoch 52
+New lowest bias: 0.546422893481717 at epoch 53
+New lowest bias: 0.5138314785373609 at epoch 58
+Final Balanced Accuracy for bias prediction on Training Set: 0.5557
+Final Balanced Accuracy for bias prediction on Test Set: 0.5665
+-------------------------------
+New lowest bias: 0.6128199056289358 at epoch 34
+New lowest bias: 0.6103509972109666 at epoch 39
+New lowest bias: 0.5930379413776772 at epoch 41
+New lowest bias: 0.5816844708730201 at epoch 45
+New lowest bias: 0.5678664772228946 at epoch 49
+New lowest bias: 0.5422608710905296 at epoch 53
+New lowest bias: 0.5305785051483098 at epoch 76
+New lowest bias: 0.5300040344507008 at epoch 94
+New lowest bias: 0.5205713133014085 at epoch 97
+Final Balanced Accuracy for bias prediction on Training Set: 0.6237
+Final Balanced Accuracy for bias prediction on Test Set: 0.5674
+-------------------------------
+New lowest bias: 0.6735673094251217 at epoch 34
+New lowest bias: 0.6085736168679041 at epoch 35
+New lowest bias: 0.6080194629663003 at epoch 45
+New lowest bias: 0.5795143269057488 at epoch 50
+New lowest bias: 0.5633852946476843 at epoch 55
+New lowest bias: 0.5505631645341503 at epoch 56
+New lowest bias: 0.5374391782303118 at epoch 59
+Final Balanced Accuracy for bias prediction on Training Set: 0.6112
+Final Balanced Accuracy for bias prediction on Test Set: 0.6016
+-------------------------------
+New lowest bias: 0.6711630036630036 at epoch 34
+New lowest bias: 0.6613369963369964 at epoch 36
+New lowest bias: 0.6476098901098901 at epoch 38
+New lowest bias: 0.6370558608058607 at epoch 39
+New lowest bias: 0.6187225274725274 at epoch 40
+New lowest bias: 0.5953159340659341 at epoch 45
+New lowest bias: 0.5791117216117216 at epoch 46
+New lowest bias: 0.5583104395604396 at epoch 49
+New lowest bias: 0.5515476190476191 at epoch 83
+New lowest bias: 0.5255998168498168 at epoch 84
+Final Balanced Accuracy for bias prediction on Training Set: 0.6111
+Final Balanced Accuracy for bias prediction on Test Set: 0.5584
+-------------------------------
+New lowest bias: 0.610228259062956 at epoch 34
+New lowest bias: 0.5897338824355021 at epoch 46
+New lowest bias: 0.5880210160852463 at epoch 56
+New lowest bias: 0.583196365583852 at epoch 57
+New lowest bias: 0.5787733845500379 at epoch 63
+New lowest bias: 0.5591192819812001 at epoch 66
+Final Balanced Accuracy for bias prediction on Training Set: 0.5921
+Final Balanced Accuracy for bias prediction on Test Set: 0.5676
+-------------------------------
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5723
+Average NDCG@10 across folds: 0.0737
+
+--multvae_da --epochs 100 --batch_size 400 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset lfm-demobias --anneal_cap 0.4 --mi_estimator CLUB --dropout 0.2
+New lowest bias: 0.62241653418124 at epoch 34
+New lowest bias: 0.6160572337042924 at epoch 39
+New lowest bias: 0.5891891891891892 at epoch 41
+New lowest bias: 0.5865659777424483 at epoch 43
+New lowest bias: 0.5710651828298887 at epoch 44
+New lowest bias: 0.5674085850556438 at epoch 50
+New lowest bias: 0.5448330683624801 at epoch 53
+Final Balanced Accuracy for bias prediction on Training Set: 0.6269
+Final Balanced Accuracy for bias prediction on Test Set: 0.5852
+-------------------------------
+New lowest bias: 0.6420565173919908 at epoch 34
+New lowest bias: 0.6214018839130664 at epoch 35
+New lowest bias: 0.6196784718202389 at epoch 39
+New lowest bias: 0.6034573488396568 at epoch 41
+New lowest bias: 0.5526802785525092 at epoch 47
+New lowest bias: 0.5516015015173042 at epoch 68
+New lowest bias: 0.549452717991896 at epoch 73
+New lowest bias: 0.5404804504551912 at epoch 75
+Final Balanced Accuracy for bias prediction on Training Set: 0.5741
+Final Balanced Accuracy for bias prediction on Test Set: 0.6206
+-------------------------------
+
+--multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ekstrabladet --anneal_cap 0.4 --mi_estimator L1Out --dropout 0.3
+New lowest bias: 0.6353797236150178 at epoch 34
+New lowest bias: 0.631517263870205 at epoch 35
+New lowest bias: 0.6187477069830012 at epoch 36
+New lowest bias: 0.6126431861725979 at epoch 42
+New lowest bias: 0.5934837552484611 at epoch 52
+New lowest bias: 0.5820288614406262 at epoch 56
+New lowest bias: 0.5798275651216828 at epoch 68
+New lowest bias: 0.5762606497900615 at epoch 74
+New lowest bias: 0.5339060780237251 at epoch 77
+10:07:39 Final Balanced Accuracy for bias prediction on Training Set: 0.5652
+Test Set NDCG@10: 0.1668, Recall@10: 0.0321
+Final Balanced Accuracy for bias prediction on Test Set: 0.6082
+-------------------------------
+New lowest bias: 0.6430240320427236 at epoch 34
+New lowest bias: 0.5553973926019006 at epoch 36
+New lowest bias: 0.5460221471766276 at epoch 68
+10:18:48 Final Balanced Accuracy for bias prediction on Training Set: 0.5685
+Test Set NDCG@10: 0.1501, Recall@10: 0.0269
+Final Balanced Accuracy for bias prediction on Test Set: 0.6163
+-------------------------------
+New lowest bias: 0.660624144421629 at epoch 34
+New lowest bias: 0.6131716290212184 at epoch 35
+New lowest bias: 0.6090434633812457 at epoch 49
+New lowest bias: 0.5881780458590007 at epoch 51
+New lowest bias: 0.5784137577002053 at epoch 54
+New lowest bias: 0.5478161362080767 at epoch 77
+10:29:45 Final Balanced Accuracy for bias prediction on Training Set: 0.5809
+Test Set NDCG@10: 0.1640, Recall@10: 0.0288
+Final Balanced Accuracy for bias prediction on Test Set: 0.5675
+-------------------------------
+New lowest bias: 0.6272220100971533 at epoch 34
+New lowest bias: 0.6159687751898519 at epoch 35
+New lowest bias: 0.6046094777480803 at epoch 39
+New lowest bias: 0.6023079207500742 at epoch 50
+New lowest bias: 0.5828666581816639 at epoch 54
+New lowest bias: 0.5767574561961732 at epoch 60
+New lowest bias: 0.5377370497645412 at epoch 61
+New lowest bias: 0.527173221331297 at epoch 78
+10:40:38 Final Balanced Accuracy for bias prediction on Training Set: 0.5433
+Test Set NDCG@10: 0.1545, Recall@10: 0.0280
+Final Balanced Accuracy for bias prediction on Test Set: 0.5256
+-------------------------------
+New lowest bias: 0.6566804407713498 at epoch 34
+New lowest bias: 0.6227043158861341 at epoch 36
+New lowest bias: 0.6210973370064279 at epoch 37
+New lowest bias: 0.6152433425160698 at epoch 39
+New lowest bias: 0.580119375573921 at epoch 49
+New lowest bias: 0.561524334251607 at epoch 61
+New lowest bias: 0.55222681359045 at epoch 68
+New lowest bias: 0.5378787878787878 at epoch 72
+10:51:21 Final Balanced Accuracy for bias prediction on Training Set: 0.6246
+Test Set NDCG@10: 0.1580, Recall@10: 0.0287
+Final Balanced Accuracy for bias prediction on Test Set: 0.5681
+-------------------------------
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5771
+Average NDCG@10 across folds: 0.1587
+
+--multvae_da --epochs 100 --batch_size 1000 --prioritize_bias --club_weight 15 --latent_dim_domain 200 --dataset ekstrabladet --anneal_cap 0.4 --mi_estimator CLUB --dropout 0.3
+New lowest bias: 0.6410358322123029 at epoch 34
+New lowest bias: 0.6353899148016795 at epoch 35
+New lowest bias: 0.6285516285516286 at epoch 37
+New lowest bias: 0.610421507480331 at epoch 38
+New lowest bias: 0.5931984020219314 at epoch 41
+New lowest bias: 0.5817231258407729 at epoch 49
+New lowest bias: 0.5782071664424606 at epoch 60
+New lowest bias: 0.5722249398719987 at epoch 62
+New lowest bias: 0.5474705474705475 at epoch 64
+New lowest bias: 0.5368819045289633 at epoch 80
+New lowest bias: 0.5147466470995883 at epoch 85
+11:02:04 Final Balanced Accuracy for bias prediction on Training Set: 0.6272
+Test Set NDCG@10: 0.1577, Recall@10: 0.0283
+Final Balanced Accuracy for bias prediction on Test Set: 0.5954
+-------------------------------
+New lowest bias: 0.5890893740673839 at epoch 34
+New lowest bias: 0.5739908112777821 at epoch 51
+New lowest bias: 0.5736864839393702 at epoch 53
+New lowest bias: 0.5640952642739339 at epoch 63
+New lowest bias: 0.5502532788816461 at epoch 72
+11:12:36 Final Balanced Accuracy for bias prediction on Training Set: 0.5655
+Test Set NDCG@10: 0.1539, Recall@10: 0.0284
+Final Balanced Accuracy for bias prediction on Test Set: 0.6063
+-------------------------------
+New lowest bias: 0.6332028576317591 at epoch 34
+New lowest bias: 0.6155993326488707 at epoch 36
+New lowest bias: 0.6077387063655031 at epoch 37
+New lowest bias: 0.5976428815879534 at epoch 49
+New lowest bias: 0.5880817932922655 at epoch 51
+New lowest bias: 0.586734257357974 at epoch 56
+New lowest bias: 0.5865310574948666 at epoch 58
+New lowest bias: 0.5833761122518822 at epoch 60
+New lowest bias: 0.5816007871321013 at epoch 71
+New lowest bias: 0.5687243326488707 at epoch 75
+New lowest bias: 0.5548318788501027 at epoch 95
+11:23:06 Final Balanced Accuracy for bias prediction on Training Set: 0.6440
+Test Set NDCG@10: 0.1681, Recall@10: 0.0301
+Final Balanced Accuracy for bias prediction on Test Set: 0.5993
+-------------------------------
+New lowest bias: 0.6498557549531203 at epoch 34
+New lowest bias: 0.6353357939841331 at epoch 35
+New lowest bias: 0.5961562937507955 at epoch 36
+New lowest bias: 0.5631602392770778 at epoch 42
+New lowest bias: 0.5425628950829409 at epoch 47
+New lowest bias: 0.5333566670909168 at epoch 51
+11:33:36 Final Balanced Accuracy for bias prediction on Training Set: 0.6016
+Test Set NDCG@10: 0.1604, Recall@10: 0.0299
+Final Balanced Accuracy for bias prediction on Test Set: 0.5904
+-------------------------------
+New lowest bias: 0.5907943067033976 at epoch 34
+New lowest bias: 0.5880394857667586 at epoch 61
+New lowest bias: 0.5420110192837466 at epoch 65
+11:44:07 Final Balanced Accuracy for bias prediction on Training Set: 0.6283
+Test Set NDCG@10: 0.1551, Recall@10: 0.0277
+Final Balanced Accuracy for bias prediction on Test Set: 0.6039
+-------------------------------
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.5990
+Average NDCG@10 across folds: 0.1591

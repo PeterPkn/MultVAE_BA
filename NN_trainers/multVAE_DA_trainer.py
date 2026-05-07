@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import torch
 from NeuralNetworks.multVAE_DA import MultVAE_DA
 from NeuralNetworks.MI_estimation_NN import MI_net
@@ -35,8 +36,6 @@ def log_likelihood(y, mu, logvar):
 def adv_net_testing(features, labels, device, latent_dim, label):
     num_men = sum(labels)
     features_len = len(labels)
-    #lables_for_visual = [[1, 0] if x == 0 else [0, 1] for x in lables_for_visual]
-
     features = np.array(features, dtype=np.float32)
     lables = np.array(labels, dtype=np.float64)
 
@@ -44,10 +43,8 @@ def adv_net_testing(features, labels, device, latent_dim, label):
     from sklearn.model_selection import train_test_split
     features_train, features_test, lables_train, lables_test = train_test_split(features, lables, test_size=0.2, stratify=lables)
 
-    np.save('features_for_advnet_multvae_da', features)
-    np.save('labeles_for_advnet_multvae_da', lables)
-
-    # TRAIN ADV-net
+    #np.save('features_for_advnet_multvae_da', features)
+    #np.save('labeles_for_advnet_multvae_da', lables)
 
     adv_model = ADV_net(latent_dim, 100)
     adv_optim = optim.Adam(
@@ -60,9 +57,6 @@ def adv_net_testing(features, labels, device, latent_dim, label):
     weights = weights.to(device)
     adv_loss = nn.CrossEntropyLoss(weights)
 
-
-    #print(features_train.shape)
-    #print(lables_train.shape)
     adv_model.to(device)
     for _ in range(100):
         for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
@@ -73,13 +67,8 @@ def adv_net_testing(features, labels, device, latent_dim, label):
             x_data = x_data.to(device)
             y_data = y_data.to(device)
 
-            #print(x_data.type())
-            #print(y_data.type())
-
             adv_optim.zero_grad()
             predictions = adv_model(x_data)
-            #print(F.softmax(predictions)[0])
-            #print(predictions.type())
             loss = adv_loss(predictions, y_data)
 
             loss.backward()
@@ -92,26 +81,17 @@ def adv_net_testing(features, labels, device, latent_dim, label):
 
         # After training, get all test predictions
         all_preds = torch.argmax(predictions_test, dim=1).cpu().numpy()
-        all_true = lables_test #torch.argmax(torch.from_numpy(lables_test), dim=1).numpy()
+        all_true = lables_test
 
         b_acc = balanced_accuracy_score(all_true, all_preds)
-        #print(f"Standardized Balanced Accuracy for {label}: {b_acc}")
+        print(f"Standardized Balanced Accuracy for {label}: {b_acc}")
 
     return b_acc
-        # 0.5 is random chance, 1.0 is perfect bias, 0.0 is perfectly wrong
-# input -> 500 -> 200 (latent) -> output
-# testen von BAcc auf MultVAE (ohne CLUB) DONE
-# PCA auf MultVAE oder t-SNE, UMAP DONE
-# erste 10-20 epochen ohne CLUB ANNEALING DONE
-# domain encoder balanced accuracy track DONE
 
-def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5.0, prioritize_bias=False, latent_dim_domain=200):
-    #print("Training multVAE with domain adaptation...")
-    #print(f"Club weight: {club_weight}, Anneal steps: {anneal_steps}, Anneal cap: {anneal_cap}")
+def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5.0, prioritize_bias=False, latent_dim_domain=200, mi_estimator="L1Out", dropout=0.5):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
-    #print(f"Input size: {train_loader.dataset.num_items}, Latent dim: {latent_dim}, Domain Latent dim: {latent_dim_domain}")
-    model = MultVAE_DA([train_loader.dataset.num_items, 600, 200], latent_dim=latent_dim, dropout=0.5, training=True, latent_dim_domain=latent_dim_domain)
+    model = MultVAE_DA([train_loader.dataset.num_items, 600, 200], latent_dim=latent_dim, dropout=dropout, training=True, latent_dim_domain=latent_dim_domain)
     mi_model = MI_net(200, 300, latent_dim_domain)
     mi_model.to(device)
     model.to(device)
@@ -149,7 +129,6 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
         weight_decay=0.0
     )
 
-    #train_user_info['gender'].map({'M': 1, 'F': 0})
     men_count = train_user_info['gender'].sum()
     all_count = len(train_user_info)
     weights = torch.tensor([(men_count/all_count)/(1-(men_count/all_count)), 1.0], device=device, dtype=torch.float32)  # Adjust weights for each class if needed
@@ -163,6 +142,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     last_model = None
     features_for_pca = []
     lables_for_visual = []
+
     for j in range(epochs):
         avg_gender_loss = 0.0
         bound_sum = 0.0
@@ -171,27 +151,19 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
         for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
-
-            #rand = random.randint(0, x_data.shape[0]-1)
-            # maximize log-likelyhood for MI-estimation, 
-            # CURRENT METHOD: MI_net predicts domain distribution from feature sample -> 
-            # calculate probability of domain sample given predicted distribution
             for _ in range(5):
-                mi_optim.zero_grad()
+                model.zero_grad()
                 _, mu_mipass, logvar_mipass, _, mu_domain_mipass, logvar_domain_mipass = model(x_data)
-                sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass).detach()  # Detach to prevent gradients from flowing into the VAE
+                sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass).detach()
                 sample_z_mipass = sample_z_mipass.to(device)
-                #print(sample_z_mipass.shape)
-                #features_for_pca.extend(sample_z_mipass.cpu().detach().numpy().tolist())
-                #sample_domain_z_mipass = reparameterize(mu=mu_domain_mipass, logvar=logvar_domain_mipass).detach()
                 target_domain = mu_domain_mipass.detach()
                 domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
                 mi_loss = -torch.mean(log_likelihood(target_domain, domain_pred_mu_mipass, domain_pred_logvar_mipass)) # negative log likelihood
                 mi_loss.backward()
                 mi_optim.step()
 
-            context_optim.zero_grad()
-            recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, logvar_domain_featureoptim = model(x_data)
+            model.zero_grad()
+            recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, _ = model(x_data)
             # Compute VAE loss
             if total_anneal_steps > 0:
                 anneal = min(anneal_cap, anneal_cap * update_count / total_anneal_steps)
@@ -200,8 +172,6 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
                 anneal = anneal_cap
                 club_anneal = club_weight
             update_count += x_data.size(0)
-            #print(f"Processed samples: {update_count}")  # count number of samples processed
-
 
             log_probs = F.log_softmax(recon_batch_featureoptim, dim=1)
 
@@ -209,26 +179,21 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             MLL = torch.mean(-torch.sum(log_probs * x_data, dim=1))
             KLD = torch.mean(-0.5 * torch.sum(1 + logvar_featureoptim - mu_featureoptim.pow(2) - logvar_featureoptim.exp(), dim=1))
 
-            # Calculate KLD for both spaces to keep them anchored around 0
-            #KLD_c = torch.mean(-0.5 * torch.sum(1 + logvar_featureoptim - mu_featureoptim.pow(2) - logvar_featureoptim.exp(), dim=1))
-            #KLD_d = torch.mean(-0.5 * torch.sum(1 + logvar_domain_featureoptim - mu_domain_featureoptim.pow(2) - logvar_domain_featureoptim.exp(), dim=1))
-            
-            # Combine them
-            #KLD = KLD_c + KLD_d
-
             # log q(yi|xi)
 
             # for each sample:
             # calculate log q(yi|xi)
             sample_z_featureoptim = reparameterize(mu=mu_featureoptim, logvar=logvar_featureoptim)
-            #sample_domain_z_featureoptim = reparameterize(mu=mu_domain_featureoptim, logvar=logvar_domain_featureoptim)
             target_domain_featureoptim = mu_domain_featureoptim.detach()
             domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(sample_z_featureoptim)
             batch_size = mu_featureoptim.shape[0]
 
-            z_expanded = target_domain_featureoptim.unsqueeze(1)
-            mu_expanded = domain_pred_mu_featureoptim.unsqueeze(0)
-            logvar_expanded = domain_pred_logvar_featureoptim.unsqueeze(0)
+            assert sample_z_featureoptim.shape == (batch_size, latent_dim)
+            assert target_domain_featureoptim.shape == (batch_size, latent_dim_domain)
+
+            z_expanded = target_domain_featureoptim.unsqueeze(1) # [B, 1, latent_dim_domain], The Y in P(Y|X), yi is chosen on axis 0
+            mu_expanded = domain_pred_mu_featureoptim.unsqueeze(0) # [1, B, latent_dim_domain] The X in P(Y|X), xi is chosen on axis 1
+            logvar_expanded = domain_pred_logvar_featureoptim.unsqueeze(0) # [1, B, latent_dim_domain]
 
             # Calculate pairwise log-likelihoods: [B, B] matrix
             pairwise_ll = -0.5 * torch.sum(
@@ -240,65 +205,63 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             q_yi_xi = torch.diag(pairwise_ll)
 
             # q_yj_xi is the mean of the off-diagonals
-            row_sums = torch.sum(pairwise_ll, dim=1)
-            q_yj_xi = (row_sums - q_yi_xi) / (batch_size - 1)
+            #row_sums = torch.sum(pairwise_ll, dim=1)
+            #q_yj_xi = (row_sums - q_yi_xi) / (batch_size - 1)
+            #bound = torch.mean(q_yi_xi - q_yj_xi)
 
-            
-            bound = torch.mean(q_yi_xi - q_yj_xi)
+            # Toggle the estimator here
+            if mi_estimator == "L1Out":
+                # Leave-One-Out upper bound (Unbiased marginal) - This was your original code
+                row_sums = torch.sum(pairwise_ll, dim=1)
+                q_yj_xi = (row_sums - q_yi_xi) / (batch_size - 1)
+                bound = torch.mean(q_yi_xi - q_yj_xi)
+
+            elif mi_estimator == "CLUB":
+                # Standard CLUB upper bound (Biased marginal, includes i=j term)
+                q_yj_xi = torch.mean(pairwise_ll, dim=1)
+                bound = torch.mean(q_yi_xi - q_yj_xi)
+
+            elif mi_estimator == "MINE":
+                # Mutual Information Neural Estimator (Donsker-Varadhan Lower Bound)
+                # Note: MINE is theoretically a lower bound, but can be minimized via adversarial dynamics.
+                import math
+                off_diag_mask = ~torch.eye(batch_size, dtype=torch.bool, device=device)
+                off_diag_ll = pairwise_ll[off_diag_mask]
+                marginal_term = torch.logsumexp(off_diag_ll, dim=0) - math.log(batch_size * (batch_size - 1))
+                bound = torch.mean(q_yi_xi) - marginal_term
+
+            elif mi_estimator == "VUB":
+                # Variational Upper Bound
+                # Approximates the marginal p(y) using the batch average of q(y|x)
+                import math
+                marginal_approx = torch.logsumexp(pairwise_ll, dim=1) - math.log(batch_size)
+                bound = torch.mean(q_yi_xi - marginal_approx)
+
+
+
             bound = torch.clamp(bound, min=0.0)
 
             bound_sum += bound.item()
             kld_sum += KLD.item()
             mll_sum += MLL.item()
-            #sample_domain_z = reparameterize(mu=mu_domain, logvar=logvar_domain)
-            #domain_pred_mu, domain_pred_logvar = mi_model(sample_z)
-            #q_yi_xi = log_likelihood(sample_domain_z, domain_pred_mu, domain_pred_logvar)
-            ## for every sample:
-            ## calculate sum over j log q(yj|xi) with j != i
-            #q_yj_xi = torch.zeros([batch_size, 1])
-            #for idx_x, _ in enumerate(sample_z):
-            #    q_yj_xi[idx_x] = torch.mean(log_likelihood(sample_domain_z, domain_pred_mu[idx_x] * batch_size, domain_pred_logvar[idx_x] * batch_size))
-
-           # #bound = torch.mean(q_yi_xi - q_yj_xi)
-
 
             loss_feature = MLL + anneal * KLD + (club_anneal * club_weight) * bound
-            #print(bound)
             loss_feature.backward()
             context_optim.step()
 
             model.zero_grad()
-            mi_model.zero_grad()
-            domain_optim.zero_grad()
             _, _, _, domain_predictions_domainoptim, mu_domain_domainoptim, logvar_domain_domainoptim = model(x_data) # 0 is female, 1 is male
             real_domain = train_user_info.iloc[idx.numpy()]
-            gender_map = {'M': 1, 'F': 0}
-            gender_array = real_domain['gender'].to_numpy()  #.map(gender_map).to_numpy()
-            #lables_for_visual.extend(gender_array)
+            gender_array = real_domain['gender'].to_numpy()
             gender_tensor = torch.from_numpy(gender_array.copy()).long()
             gender_tensor = gender_tensor.to(device)
 
-            #print(domain_predictions_domainoptim.type())
-            #print(gender_tensor.type())
-
-            KLD_d = torch.mean(-0.5 * torch.sum(1 + logvar_domain_domainoptim - mu_domain_domainoptim.pow(2) - logvar_domain_domainoptim.exp(), dim=1))
-            #l2_reg = torch.mean(mu_domain_domainoptim.pow(2))
-
-            loss = domain_loss(domain_predictions_domainoptim, gender_tensor) #+ anneal * KLD_d #0.05 * l2_reg
-
-            #print(loss.item())
-
+            loss = domain_loss(domain_predictions_domainoptim, gender_tensor)
             avg_gender_loss += loss.item()
             
             loss.backward()
-            domain_optim.step()
-        #print(f"\nEpoch {j+1}, Batch MI Bound: {bound_sum/len(train_loader):.4f}, KLD: {kld_sum/len(train_loader):.4f}, MLL: {mll_sum/len(train_loader):.4f}, anneal: {anneal:.4f}, club_anneal: {(club_anneal * club_weight):.4f}")
-        #print(f'Average gender prediction loss after epoch {j+1}: {avg_gender_loss/len(train_loader):.4f}')
-            
+            domain_optim.step() 
 
-            #if i % 20 == 19:               
-                #print(f'Epoch: {j+1}, Batch: {i+1}, anneal: {anneal:.4f}')
-        # check performance on validation set after each epoch
         if val_loader is not None:
             model.eval()
             batch_evaluator = BatchEvaluator(metrics=["ndcg", "recall"], top_k=[10, 50])
@@ -348,7 +311,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].tolist())
 
     b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Training Set")
-    print(f"Final Balanced Accuracy for bias prediction on Training Set: {b_acc:.4f}")
+    print(f"{datetime.now().strftime('%H:%M:%S')} Final Balanced Accuracy for bias prediction on Training Set: {b_acc:.4f}")
     # TODO: train user etc. blabblablabla
 
 
@@ -374,7 +337,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     plt.colorbar(scatter, label='Class Labels')
     plt.xlabel('Principal Component 1')
     plt.ylabel('Principal Component 2')
-    plt.title(f'PCA Visualization, epochs: {epochs}, club_weight: {club_weight}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}, best_epoch: {best_epoch}, best_ndcg@10: {best_result:.4f}, latent dim domain size: {latent_dim_domain}')
+    plt.title(f'PCA Visualization, epochs: {epochs}, club_weight: {club_weight}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}, best_epoch: {best_epoch}, best result: {best_result:.4f}, latent dim domain size: {latent_dim_domain}')
     # make savefig not overwrite existing files
     
     
@@ -406,6 +369,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             #print(f'Test Metrics: {all_results}')
         
         b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Test Set")
+        print(f"Test Set NDCG@10: {all_results['ndcg@10']:.4f}, Recall@10: {all_results['recall@10']:.4f}")
         print(f"Final Balanced Accuracy for bias prediction on Test Set: {b_acc:.4f}")
         print('-------------------------------')
     PATH = './ml1m_multvae_DA.pth'

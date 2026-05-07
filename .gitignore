@@ -4,3 +4,4 @@ __pycache__/
 *.npy
 *.pth
 *.png
+ml1m_multvae.pth
