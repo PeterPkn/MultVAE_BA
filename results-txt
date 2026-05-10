@@ -412,3 +412,43 @@ Final Balanced Accuracy for bias prediction on Test Set: 0.6039
 -------------------------------
 Average Balanced Accuracy on Bias Prediction Task across folds: 0.5990
 Average NDCG@10 across folds: 0.1591
+
+---------------------------------------
+
+ADV net
+alpha = 1.0
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6435
+Average NDCG@10 across folds: 0.2821
+alpha = 0.5
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6362
+Average NDCG@10 across folds: 0.2843
+alpha = 0.25
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6790
+Average NDCG@10 across folds: 0.2806
+alpha = 0.10
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6938
+Average NDCG@10 across folds: 0.2812
+--alpha 0.05
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6989
+Average NDCG@10 across folds: 0.2850
+--alpha 0.15
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6805
+Average NDCG@10 across folds: 0.2824
+--alpha 0.30
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6556
+Average NDCG@10 across folds: 0.2847
+--alpha 0.60
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6568
+Average NDCG@10 across folds: 0.2857
+--alpha 1.5
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6240
+Average NDCG@10 across folds: 0.2827
+--alpha 2.0
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6343
+Average NDCG@10 across folds: 0.2882
+--alpha 4.0
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6737
+Average NDCG@10 across folds: 0.2718
+--alpha 10.0
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.7016
+Average NDCG@10 across folds: 0.2824

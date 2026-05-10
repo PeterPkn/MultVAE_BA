@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import torch
 from NN_trainers.multVAE_trainer import train as train_multvae
+from NN_trainers.multVAE_ADV_trainer import train as train_multvae_adv
 from NN_trainers.multVAE_DA_trainer import train as train_multvae_da
 from DataLoaders.ML1M_loader import get_dataset_dataloaders
 from NN_testing.test_bias import test
@@ -19,6 +20,7 @@ if __name__ == "__main__":
     model_group = parser.add_mutually_exclusive_group(required=True)
     model_group.add_argument('--multvae', action='store_true', help='Train the multVAE model')
     model_group.add_argument('--multvae_da', action='store_true', help='Train the multVAE model with domain adaptation')
+    model_group.add_argument('--multvae_adv', action='store_true', help='Train the multVAE model with adversarial debiasing')
     model_group.add_argument('--multvae_da_visualize', action='store_true', help='Train the multVAE model with domain adaptation and visualize the bias by varying the CLUB weight')
     parser.add_argument('--epochs', type=int, default=70, help='Number of training epochs')
     parser.add_argument('--alldata', action='store_true', help='Use all data for training (no validation set)')
@@ -32,6 +34,7 @@ if __name__ == "__main__":
     parser.add_argument('--anneal_cap', type=float, default=0.4, help='Maximum weight for KL divergence annealing (default: 0.4)')
     parser.add_argument("--mi_estimator", type=str, default="L1Out", help='Mutual information estimator to use in CLUB penalty (default: L1Out), options: L1Out, CLUB, MINE, VUB')
     parser.add_argument('--dropout', type=float, default=0.5, help='Dropout probability')
+    parser.add_argument('--alpha', type=float, default=1.0, help='Dropout probability')
     # parse arguments
     args = parser.parse_args()
 
@@ -80,6 +83,19 @@ if __name__ == "__main__":
             print(f"Average Balanced Accuracy on Bias Prediction Task across folds: {np.mean(results_bacc):.4f}")
             print(f"Average NDCG@10 across folds: {np.mean([m['ndcg@10'] for m in results_metrics]):.4f}")
             
+    elif args.multvae_adv:
+        train_loader, val_loader, test_loader, train_user_info, val_user_info, test_user_info = get_dataset_dataloaders(global_indexing=False, dataset=args.dataset)
+        results_bacc = []
+        results_metrics = []
+        for idx, fold in enumerate(train_loader):
+            print("Fold ", idx)
+            epochs = args.epochs
+            b_acc, metrics = train_multvae_adv(epochs=epochs, train_user_info=train_user_info[idx], val_user_info=val_user_info[idx], test_user_info=test_user_info[idx], train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=args.anneal_cap, small_model=args.small_model, alpha=args.alpha, adv_net_dim=100)
+            results_bacc.append(b_acc)
+            results_metrics.append(metrics)
+        print(f"Average Balanced Accuracy on Bias Prediction Task across folds: {np.mean(results_bacc):.4f}")
+        print(f"Average NDCG@10 across folds: {np.mean([m['ndcg@10'] for m in results_metrics]):.4f}")
+
     elif args.multvae_da_visualize:
         train_loader, val_loader, test_loader, train_user_info, val_user_info, test_user_info = get_dataset_dataloaders(global_indexing=False, dataset=args.dataset)
         train_loader = train_loader[0]  # Just take the first fold for visualization
