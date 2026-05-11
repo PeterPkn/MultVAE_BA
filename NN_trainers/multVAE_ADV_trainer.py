@@ -40,10 +40,10 @@ def visualize_pca(features_for_pca, lables_for_visual, epochs, anneal_cap, b_acc
     # make savefig not overwrite existing files
     
     
-    filename = 'multvae_da_PCA.png'
+    filename = 'multvae_ADV_PCA.png'
     counter = 1
     while os.path.exists(filename):
-        filename = f'multvae_da_PCA_{counter}.png'
+        filename = f'multvae_ADV_PCA_{counter}.png'
         counter += 1
     plt.savefig(filename, dpi=300, bbox_inches='tight')
 
@@ -222,6 +222,7 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
                 batch_evaluator.eval_batch(np.arange(len_batch), recon_batch.cpu(), targets.cpu())
                 
             #print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
+            visualize_pca(features_for_pca=features_for_pca, lables_for_visual=lables_for_visual, epochs=epochs, anneal_cap=anneal_cap, b_acc=b_acc, best_result=batch_evaluator.get_results(reset_state=False).aggregated_metrics["ndcg@10"])
             return b_acc, batch_evaluator.get_results().aggregated_metrics if test_loader is not None else None
         
     return b_acc, None

@@ -419,6 +419,8 @@ ADV net
 alpha = 1.0
 Average Balanced Accuracy on Bias Prediction Task across folds: 0.6435
 Average NDCG@10 across folds: 0.2821
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6373
+Average NDCG@10 across folds: 0.2850
 alpha = 0.5
 Average Balanced Accuracy on Bias Prediction Task across folds: 0.6362
 Average NDCG@10 across folds: 0.2843
@@ -452,3 +454,6 @@ Average NDCG@10 across folds: 0.2718
 --alpha 10.0
 Average Balanced Accuracy on Bias Prediction Task across folds: 0.7016
 Average NDCG@10 across folds: 0.2824
+--alpha 1.0 --dataset ekstrabladet
+Average Balanced Accuracy on Bias Prediction Task across folds: 0.6252
+Average NDCG@10 across folds: 0.1619
