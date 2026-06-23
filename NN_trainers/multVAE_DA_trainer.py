@@ -14,12 +14,59 @@ import numpy as np
 from torch.utils.data import Subset
 import random
 from tqdm import tqdm
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 def reparameterize(mu, logvar):
     std = torch.exp(0.5 * logvar)
     eps = torch.randn_like(std)
 
     return mu + eps * std
+
+def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_name, metric2_values, test_performance, test_bias):
+    """
+    Writes training configuration, per-epoch metrics, and final results to a log file.
+    
+    Args:
+        filepath (str): Path to save the log file.
+        infostr (str): The configuration string generated at the start of training.
+        metric1_name (str): Name of the first metric (e.g., 'Train Loss').
+        metric1_values (list): List of metric 1 values per epoch.
+        metric2_name (str): Name of the second metric (e.g., 'Val NDCG').
+        metric2_values (list): List of metric 2 values per epoch.
+        test_performance (float): Final performance on the test set.
+        test_bias (float): Final bias calculation on the test set.
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    with open(f"{filepath}_{timestamp}.txt", 'x') as f:
+        # 1. Write the Header Info String
+        f.write(infostr.strip() + '\n\n')
+        
+        # 2. Write the Per-Epoch Metrics Table
+        f.write("================================================================================\n")
+        f.write("                               PER EPOCH METRICS\n")
+        f.write("================================================================================\n")
+        # Format table headers
+        f.write(f"{'Epoch':<10} | {metric1_name:<20} | {metric2_name:<20}\n")
+        f.write("-" * 80 + "\n")
+        
+        # Determine number of epochs (handles case where lists might slightly differ in length if interrupted)
+        epochs = max(len(metric1_values), len(metric2_values))
+        
+        # Write rows
+        for i in range(epochs):
+            m1 = f"{metric1_values[i]:.6f}" if i < len(metric1_values) else "N/A"
+            m2 = f"{metric2_values[i]:.6f}" if i < len(metric2_values) else "N/A"
+            f.write(f"{i+1:<10} | {m1:<20} | {m2:<20}\n")
+            
+        # 3. Write Final Test Results
+        f.write("\n================================================================================\n")
+        f.write("                               FINAL TEST RESULTS\n")
+        f.write("================================================================================\n")
+        f.write(f"Test Performance:       {test_performance:.6f}\n")
+        f.write(f"Test Bias:              {test_bias:.6f}\n")
+        f.write("================================================================================\n")
+
+    print(f"Log saved successfully to {filepath}")
 
 def log_likelihood(y, mu, logvar):
     # y: [batch_size, dimensions]
@@ -59,10 +106,13 @@ def adv_net_testing(features, labels, device, latent_dim, label):
 
     adv_model.to(device)
     for _ in range(100):
+        index = torch.randperm(features_train.shape[0])
+        features_train_perm = features_train[index]
+        lables_train_perm = lables_train[index]
         for batch in range(np.ceil(features_train.shape[0]/128).astype(int)):
             
-            x_data = torch.from_numpy(features_train[batch*128:np.min([batch*128+128, features_train.shape[0]])])
-            y_data = torch.from_numpy(lables_train[batch*128:np.min([batch*128+128, features_train.shape[0]])]).long()
+            x_data = torch.from_numpy(features_train_perm[batch*128:np.min([batch*128+128, features_train.shape[0]])])
+            y_data = torch.from_numpy(lables_train_perm[batch*128:np.min([batch*128+128, features_train.shape[0]])]).long()
 
             x_data = x_data.to(device)
             y_data = y_data.to(device)
@@ -84,11 +134,16 @@ def adv_net_testing(features, labels, device, latent_dim, label):
         all_true = lables_test
 
         b_acc = balanced_accuracy_score(all_true, all_preds)
-        print(f"Standardized Balanced Accuracy for {label}: {b_acc}")
+        #print(f"Standardized Balanced Accuracy for {label}: {b_acc}")
 
     return b_acc
 
-def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5.0, prioritize_bias=False, latent_dim_domain=200, mi_estimator="L1Out", dropout=0.5):
+def calculate_performance_score(bacc, ndcg, best_bacc, best_ndcg):
+    perf_metric = (np.abs(best_bacc-0.5)/np.abs(bacc-0.5)) + (ndcg/best_ndcg)
+    return perf_metric/2
+
+
+def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5.0, prioritize_bias=False, latent_dim_domain=200, mi_estimator="L1Out", dropout=0.5, mi_logvar = 1.0):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
     model = MultVAE_DA([train_loader.dataset.num_items, 600, 200], latent_dim=latent_dim, dropout=dropout, training=True, latent_dim_domain=latent_dim_domain)
@@ -98,6 +153,9 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     total_anneal_steps = anneal_steps  # Anneal over ~20-50 epochs depending on dataset size
     anneal_cap = anneal_cap
     update_count = 0
+
+    k = 0.5
+    x0 = epochs / 4.0
 
     context_variables = nn.ParameterList()
     context_variables += model.encoder.parameters()
@@ -125,9 +183,12 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     )
     mi_optim = optim.Adam(
         mi_variables,
-        lr=2e-3,
+        lr=1e-3,
         weight_decay=0.0
     )
+
+    context_scheduler = CosineAnnealingLR(context_optim, T_max=epochs)
+    domain_scheduler = CosineAnnealingLR(domain_optim, T_max=epochs)
 
     men_count = train_user_info['gender'].sum()
     all_count = len(train_user_info)
@@ -136,44 +197,69 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     domain_loss = nn.CrossEntropyLoss(weight=weights)
 
     #print('Starting training...')
-    best_result = 100.0 if prioritize_bias else 0.0
+    best_ndcg = 0.29
+    best_bacc = 0.7
+    best_score = 0.0
     best_epoch = 0
     best_model = None
     last_model = None
     features_for_pca = []
     lables_for_visual = []
 
-    for j in range(epochs):
-        avg_gender_loss = 0.0
+    ndcg_metrics = []
+    bacc_metrics = []
+
+    for j in tqdm(range(int(epochs/3))):
+        # PRE-train the domain model to prevent the model from chasing a model that chases a model
+        for _, (x_data, _, idx) in enumerate(train_loader):
+            x_data = x_data.to(device)
+            model.zero_grad()
+            _, _, _, domain_predictions_domainoptim, mu_domain_domainoptim, logvar_domain_domainoptim = model(x_data) # 0 is female, 1 is male
+            real_domain = train_user_info.iloc[idx.numpy()]
+            gender_array = real_domain['gender'].to_numpy()
+            gender_tensor = torch.from_numpy(gender_array.copy()).long()
+            gender_tensor = gender_tensor.to(device)
+
+            loss = domain_loss(domain_predictions_domainoptim, gender_tensor)
+            
+            loss.backward()
+            domain_optim.step()
+        domain_scheduler.step()
+
+    for j in tqdm(range(epochs)):
         bound_sum = 0.0
         kld_sum = 0.0
         mll_sum = 0.0
 
         for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
+            batch_size = x_data.shape[0]
+            model.eval()
+            domain_pred_logvar = torch.full_like(torch.ones(x_data.shape[0], latent_dim_domain), mi_logvar).to(device)
             for _ in range(5):
                 model.zero_grad()
                 _, mu_mipass, logvar_mipass, _, mu_domain_mipass, logvar_domain_mipass = model(x_data)
                 sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass).detach()
                 sample_z_mipass = sample_z_mipass.to(device)
                 target_domain = mu_domain_mipass.detach()
-                domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
-                mi_loss = -torch.mean(log_likelihood(target_domain, domain_pred_mu_mipass, domain_pred_logvar_mipass)) # negative log likelihood
+                #domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
+                domain_pred_mu_mipass = mi_model(sample_z_mipass)
+                mi_loss = -torch.mean(log_likelihood(target_domain, domain_pred_mu_mipass, domain_pred_logvar)) # negative log likelihood
                 mi_loss.backward()
                 mi_optim.step()
-
+            model.train()
             model.zero_grad()
             recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, _ = model(x_data)
             # Compute VAE loss
             if total_anneal_steps > 0:
                 anneal = min(anneal_cap, anneal_cap * update_count / total_anneal_steps)
-                club_anneal = 0 if j < 40 else min(1., 1. * (j - 40) / (epochs - 40))  # Linearly increase CLUB weight after 40 epochs
             else:
                 anneal = anneal_cap
-                club_anneal = club_weight
             update_count += x_data.size(0)
 
             log_probs = F.log_softmax(recon_batch_featureoptim, dim=1)
+
+            club_anneal = club_weight / (1 + np.exp(-k * (j - x0)))
 
             # Loss calculation
             MLL = torch.mean(-torch.sum(log_probs * x_data, dim=1))
@@ -185,15 +271,18 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             # calculate log q(yi|xi)
             sample_z_featureoptim = reparameterize(mu=mu_featureoptim, logvar=logvar_featureoptim)
             target_domain_featureoptim = mu_domain_featureoptim.detach()
-            domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(sample_z_featureoptim)
+            #domain_pred_mu_featureoptim, domain_pred_logvar_featureoptim = mi_model(sample_z_featureoptim)
+            domain_pred_mu_featureoptim = mi_model(sample_z_featureoptim)
             batch_size = mu_featureoptim.shape[0]
+
+            #print(np.max(domain_pred_logvar_featureoptim.cpu().detach().numpy()))
 
             assert sample_z_featureoptim.shape == (batch_size, latent_dim)
             assert target_domain_featureoptim.shape == (batch_size, latent_dim_domain)
 
             z_expanded = target_domain_featureoptim.unsqueeze(1) # [B, 1, latent_dim_domain], The Y in P(Y|X), yi is chosen on axis 0
             mu_expanded = domain_pred_mu_featureoptim.unsqueeze(0) # [1, B, latent_dim_domain] The X in P(Y|X), xi is chosen on axis 1
-            logvar_expanded = domain_pred_logvar_featureoptim.unsqueeze(0) # [1, B, latent_dim_domain]
+            logvar_expanded = domain_pred_logvar.unsqueeze(0) # [1, B, latent_dim_domain]
 
             # Calculate pairwise log-likelihoods: [B, B] matrix
             pairwise_ll = -0.5 * torch.sum(
@@ -210,31 +299,23 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             #bound = torch.mean(q_yi_xi - q_yj_xi)
 
             # Toggle the estimator here
-            if mi_estimator == "L1Out":
-                # Leave-One-Out upper bound (Unbiased marginal) - This was your original code
+            if mi_estimator == "L1Out": # Leave-One-Out CLUB
                 row_sums = torch.sum(pairwise_ll, dim=1)
                 q_yj_xi = (row_sums - q_yi_xi) / (batch_size - 1)
                 bound = torch.mean(q_yi_xi - q_yj_xi)
 
-            elif mi_estimator == "CLUB":
-                # Standard CLUB upper bound (Biased marginal, includes i=j term)
+            elif mi_estimator == "CLUB": # CLUB with all samples (not leave-one-out)
                 q_yj_xi = torch.mean(pairwise_ll, dim=1)
                 bound = torch.mean(q_yi_xi - q_yj_xi)
 
             elif mi_estimator == "MINE":
-                # Mutual Information Neural Estimator (Donsker-Varadhan Lower Bound)
-                # Note: MINE is theoretically a lower bound, but can be minimized via adversarial dynamics.
-                import math
                 off_diag_mask = ~torch.eye(batch_size, dtype=torch.bool, device=device)
                 off_diag_ll = pairwise_ll[off_diag_mask]
-                marginal_term = torch.logsumexp(off_diag_ll, dim=0) - math.log(batch_size * (batch_size - 1))
+                marginal_term = torch.logsumexp(off_diag_ll, dim=0) - np.log(batch_size * (batch_size - 1))
                 bound = torch.mean(q_yi_xi) - marginal_term
 
-            elif mi_estimator == "VUB":
-                # Variational Upper Bound
-                # Approximates the marginal p(y) using the batch average of q(y|x)
-                import math
-                marginal_approx = torch.logsumexp(pairwise_ll, dim=1) - math.log(batch_size)
+            elif mi_estimator == "VUB": # Variational Upper Bound
+                marginal_approx = torch.logsumexp(pairwise_ll, dim=1) - np.log(batch_size)
                 bound = torch.mean(q_yi_xi - marginal_approx)
 
 
@@ -246,21 +327,12 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             mll_sum += MLL.item()
 
             loss_feature = MLL + anneal * KLD + (club_anneal * club_weight) * bound
+
+            #print(f"{MLL}, {KLD}, {bound}")
             loss_feature.backward()
             context_optim.step()
 
-            model.zero_grad()
-            _, _, _, domain_predictions_domainoptim, mu_domain_domainoptim, logvar_domain_domainoptim = model(x_data) # 0 is female, 1 is male
-            real_domain = train_user_info.iloc[idx.numpy()]
-            gender_array = real_domain['gender'].to_numpy()
-            gender_tensor = torch.from_numpy(gender_array.copy()).long()
-            gender_tensor = gender_tensor.to(device)
-
-            loss = domain_loss(domain_predictions_domainoptim, gender_tensor)
-            avg_gender_loss += loss.item()
-            
-            loss.backward()
-            domain_optim.step() 
+        context_scheduler.step()
 
         if val_loader is not None:
             model.eval()
@@ -275,19 +347,22 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
                     features_for_pca.extend(mu.cpu().detach().numpy().tolist())
                     lables_for_visual.extend(val_user_info.iloc[val_idx.numpy()]['gender'].tolist())
                 result = batch_evaluator.get_results()
+                ndcg_metrics.append(result.aggregated_metrics['ndcg@10'])
                 #print(f'Validation Metrics after epoch {j+1}: {result.aggregated_metrics}')
-                if result.aggregated_metrics['ndcg@10'] > best_result and not prioritize_bias:  # Example threshold for early stopping
-                    best_result = result.aggregated_metrics['ndcg@10']
-                    best_epoch = j+1
-                    best_model = model.state_dict()  # Save the best model weights
-                    #print(f'New best model found at epoch {j+1} with NDCG@10: {best_result:.4f}')
+                if result.aggregated_metrics['ndcg@10'] > best_ndcg and j+1 > epochs/3:  # Example threshold for early stopping
+                    best_ndcg = result.aggregated_metrics['ndcg@10']
             b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Validation Set")
-
-            if abs(b_acc-0.5) < abs(best_result-0.5) and prioritize_bias and j+1 > epochs/3:  # If bias prediction is too good, save model and stop training
+            
+            if abs(b_acc-0.5) < abs(best_bacc-0.5) and j+1 > epochs/3:
                 print(f"New lowest bias: {b_acc} at epoch {j+1}")
-                best_result = b_acc
+                best_bacc = b_acc
+            bacc_metrics.append(b_acc)
+            score = calculate_performance_score(b_acc, result.aggregated_metrics['ndcg@10'], best_bacc, best_ndcg)
+            #print(score)
+            if score > best_score and j+1 > epochs/2:
                 best_epoch = j+1
-                best_model = model.state_dict()  # Save the best model weights
+                best_model = model.state_dict()
+                best_score = score
 
             features_for_pca = []
             lables_for_visual = []
@@ -296,7 +371,8 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     last_model = model.state_dict()  # Save the last model weights after training is complete
 
     # get some random samples from the latent space to train the adversarial network on
-   #f"Best epoch: {best_epoch}")
+    #f"Best epoch: {best_epoch}")
+    print(f"Best epoch {best_epoch} with score {best_score}, having best joint performance against at most ndcg {best_ndcg}, bacc {best_bacc}")
     model.load_state_dict(best_model)  # Load the best model weights before extracting features
     if prioritize_bias:
         #print("Prioritizing bias in feature extraction by loading the last model weights...")
@@ -304,7 +380,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     model.eval()
     for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
-            _, mu, logvar, _, _, _ = model(x_data)
+            _, mu, _, _, _, _ = model(x_data)
             #sample_z = reparameterize(mu=mu, logvar=logvar)
             #sample_z = sample_z.to(device)
             features_for_pca.extend(mu.cpu().detach().numpy().tolist())
@@ -312,7 +388,6 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
     b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Training Set")
     print(f"{datetime.now().strftime('%H:%M:%S')} Final Balanced Accuracy for bias prediction on Training Set: {b_acc:.4f}")
-    # TODO: train user etc. blabblablabla
 
 
     #print(features_for_pca.shape)
@@ -321,7 +396,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     features_for_pca = np.array(features_for_pca, dtype=np.float32)
     lables_for_visual = np.array(lables_for_visual, dtype=np.float64)
 
-    #create random sample of 200 features for PCA visualization
+    #create random sample of 1000 features for PCA visualization
     index = np.array([random.randint(0, features_for_pca.shape[0]-1) for _ in range(1000)])
     random_sample = features_for_pca[index]
     random_label = lables_for_visual[index]
@@ -337,7 +412,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     plt.colorbar(scatter, label='Class Labels')
     plt.xlabel('Principal Component 1')
     plt.ylabel('Principal Component 2')
-    plt.title(f'PCA Visualization, epochs: {epochs}, club_weight: {club_weight}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}, best_epoch: {best_epoch}, best result: {best_result:.4f}, latent dim domain size: {latent_dim_domain}')
+    plt.title(f'PCA Visualization, epochs: {epochs}, club_weight: {club_weight}, anneal_cap: {anneal_cap}, balanced_acc: {b_acc:.4f}, best_epoch: {best_epoch}, best score: {best_score:.4f}, latent dim domain size: {latent_dim_domain}')
     # make savefig not overwrite existing files
     
     
@@ -348,6 +423,20 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
         counter += 1
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     #plt.show()
+
+    infostr = f"""
+================================================================================
+                            TRAINING CONFIGURATION
+================================================================================
+Model Type:             MultVAE_ADV
+Latent Dim:             {latent_dim_domain}
+Total Epochs:           {epochs}
+Dropout Rate:           {dropout}
+KL Anneal Steps:        {total_anneal_steps}
+KL Anneal Cap:          {anneal_cap}
+Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
+================================================================================
+"""
 
     features_for_pca = []
     lables_for_visual = []
@@ -369,6 +458,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             #print(f'Test Metrics: {all_results}')
         
         b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Test Set")
+        save_training_log(f"multVAE_DA", infostr, "balanced accuracy", bacc_metrics, "NDCG@10", ndcg_metrics, all_results["ndcg@10"], b_acc)
         print(f"Test Set NDCG@10: {all_results['ndcg@10']:.4f}, Recall@10: {all_results['recall@10']:.4f}")
         print(f"Final Balanced Accuracy for bias prediction on Test Set: {b_acc:.4f}")
         print('-------------------------------')

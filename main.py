@@ -90,7 +90,7 @@ if __name__ == "__main__":
         for idx, fold in enumerate(train_loader):
             print("Fold ", idx)
             epochs = args.epochs
-            b_acc, metrics = train_multvae_adv(epochs=epochs, train_user_info=train_user_info[idx], val_user_info=val_user_info[idx], test_user_info=test_user_info[idx], train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=args.anneal_cap, small_model=args.small_model, alpha=args.alpha, adv_net_dim=100)
+            b_acc, metrics = train_multvae_adv(epochs=epochs, train_user_info=train_user_info[idx], val_user_info=val_user_info[idx], test_user_info=test_user_info[idx], train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=args.anneal_cap, small_model=args.small_model, alpha=args.alpha, adv_net_dim=100, dropout=args.dropout)
             results_bacc.append(b_acc)
             results_metrics.append(metrics)
         print(f"Average Balanced Accuracy on Bias Prediction Task across folds: {np.mean(results_bacc):.4f}")

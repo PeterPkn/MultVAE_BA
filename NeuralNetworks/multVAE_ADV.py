@@ -57,6 +57,7 @@ class MultVAE_ADV(nn.Module):
             x = layer(x)
         mu = self.mu_layer(x)
         logvar = self.logvar_layer(x)
+        #normalized_mu = F.layer_norm(mu, mu.size()[1:])
         adv_pred = self.adv_net(self.grad_rev(mu))
         return mu, logvar, adv_pred
 
