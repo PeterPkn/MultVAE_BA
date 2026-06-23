@@ -112,7 +112,8 @@ def run_grid_search(args):
         results.append(result_entry)
 
         df_entry = pd.DataFrame([result_entry])
-        df_entry.to_csv(f"progress_{args.output_file}", index=False, mode="a")
+        file_exists = os.path.isfile("progress_{args.output_file}")
+        df_entry.to_csv(f"progress_{args.output_file}", index=False, mode="a", header=not file_exists)
 
     # 5. Save Results to CSV
     df_results = pd.DataFrame(results)
