@@ -13,16 +13,27 @@ from DataLoaders.ML1M_loader import get_dataset_dataloaders
 def run_grid_search(args):
     # 1. Define the Hyperparameter Grid
     # You can easily add or modify parameters here
+    _param_grid = {
+    # 'mi_logvar': [-1, -1.5],
+    # 'club_weight': [100.0, 200.0, 500.0], 
+    # 'latent_dim_domain': [50],
+    # 'prioritize_bias': [True],
+    # 'anneal_cap': [0.1],
+    # 'anneal_period': [75],
+    # 'batch_size': [1024],
+    # 'epochs': [150],
+    # 'dropout': [0.6]
+    }
+
     param_grid = {
-    'mi_logvar': [-1, -1.5],
-    'club_weight': [100.0, 200.0, 500.0], 
-    'latent_dim_domain': [50],
-    'prioritize_bias': [True],
-    'anneal_cap': [0.1],
-    'anneal_period': [75],
-    'batch_size': [1024],
-    'epochs': [150],
-    'dropout': [0.6]
+    #'club_weight': [2.0, 5.0, 10.0, 15.0, 20.0], 
+    #'latent_dim_domain': [2, 50, 100, 200],
+    #'prioritize_bias': [True, False],
+    'anneal_cap': [0.1, 0.2, 0.4, 0.8],
+    'anneal_period': [30, 45, 60],
+    'batch_size': [128, 256, 512, 1024],
+    'epochs': [50, 100, 150],
+    'dropout': [0.0, 0.2, 0.4, 0.6]
     }
 
     keys = list(param_grid.keys())
