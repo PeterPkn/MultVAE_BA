@@ -116,16 +116,14 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
                     recon_batch = recon_batch - (1000 * data)
                     batch_evaluator.eval_batch(np.arange(len_batch), recon_batch.cpu(), targets.cpu())
                 result = batch_evaluator.get_results()
-                #print(f'Validation Metrics after epoch {j+1}: {result.aggregated_metrics}')
-                if result.aggregated_metrics['ndcg@10'] > best_result:  # Example threshold for early stopping
+                if result.aggregated_metrics['ndcg@10'] > best_result:
                     best_result = result.aggregated_metrics['ndcg@10']
-                    best_model = model.state_dict()  # Save the best model weights
-                    #print(f'New best model found at epoch {j+1} with NDCG@10: {best_result:.4f}')
+                    best_model = model.state_dict() 
             model.train()
 
     features_for_pca = []
     lables_for_visual = []
-    model.load_state_dict(best_model)  # Load the best model weights before extracting features
+    model.load_state_dict(best_model)
     model.eval()
     for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)
