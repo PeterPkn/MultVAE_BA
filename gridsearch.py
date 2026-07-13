@@ -13,6 +13,18 @@ from DataLoaders.ML1M_loader import get_dataset_dataloaders
 def run_grid_search(args):
     # 1. Define the Hyperparameter Grid
     # You can easily add or modify parameters here
+    _param_grid = {
+    # 'mi_logvar': [-1, -1.5],
+    # 'club_weight': [100.0, 200.0, 500.0], 
+    # 'latent_dim_domain': [50],
+    # 'prioritize_bias': [True],
+    # 'anneal_cap': [0.1],
+    # 'anneal_period': [75],
+    # 'batch_size': [1024],
+    # 'epochs': [150],
+    # 'dropout': [0.6]
+    }
+
     param_grid = {
     #'club_weight': [2.0, 5.0, 10.0, 15.0, 20.0], 
     #'latent_dim_domain': [2, 50, 100, 200],
@@ -82,7 +94,8 @@ def run_grid_search(args):
                     anneal_cap=params['anneal_cap'],
                     club_weight=params['club_weight'],
                     prioritize_bias=params['prioritize_bias'],
-                    latent_dim_domain=params['latent_dim_domain']
+                    latent_dim_domain=params['latent_dim_domain'],
+                    mi_logvar=params['mi_logvar']
                 )
             avg_b_acc += b_acc / 5.0  # Average over 5 folds
             if metrics and 'ndcg@10' in metrics:
@@ -98,6 +111,10 @@ def run_grid_search(args):
             
         results.append(result_entry)
 
+        df_entry = pd.DataFrame([result_entry])
+        file_exists = os.path.isfile("progress_{args.output_file}")
+        df_entry.to_csv(f"progress_{args.output_file}", index=False, mode="a", header=not file_exists)
+
     # 5. Save Results to CSV
     df_results = pd.DataFrame(results)
     
@@ -105,7 +122,7 @@ def run_grid_search(args):
     if 'ndcg@10' in df_results.columns:
         df_results = df_results.sort_values(by=['ndcg@10'], ascending=False)
         
-    df_results.to_csv(args.output_file, index=False)
+    df_results.to_csv(f"final_{args.output_file}", index=False)
     print(f"\nGrid search complete! Results saved to {args.output_file}")
     
     # Print the top 3 configurations
