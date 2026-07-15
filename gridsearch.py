@@ -49,11 +49,30 @@ def run_grid_search(args):
 
     results = []
 
+    progress_file = f"progress_{args.output_file}"
+    completed_combos = set()
+
+    if os.path.isfile(progress_file):
+        print(f"Found existing progress file: {progress_file}. Resuming...")
+        df_prog = pd.read_csv(progress_file)
+        
+        for _, row in df_prog.iterrows():
+            try:
+                combo = tuple(type(param_grid[k][0])(row[k]) for k in keys)
+                completed_combos.add(combo)
+            except ValueError:
+                pass
+                
+        print(f"Loaded {len(completed_combos)} previously completed combinations.")
+
     # 3. Iterate through all combinations
     for i, combo in enumerate(combinations):
         params = dict(zip(keys, combo))
         print(f"\n--- Running Combination {i+1}/{len(combinations)} ---")
         print(f"Parameters: {params}")
+        if combo in completed_combos:
+            print(f"Skipping Combination {i+1}/{len(combinations)} (Already completed)")
+            continue
 
         avg_b_acc = 0.0
         avg_ndcg10 = 0.0
@@ -112,7 +131,7 @@ def run_grid_search(args):
         results.append(result_entry)
 
         df_entry = pd.DataFrame([result_entry])
-        file_exists = os.path.isfile("progress_{args.output_file}")
+        file_exists = os.path.isfile(f"progress_{args.output_file}")
         df_entry.to_csv(f"progress_{args.output_file}", index=False, mode="a", header=not file_exists)
 
     # 5. Save Results to CSV
