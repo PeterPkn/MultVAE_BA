@@ -4,6 +4,8 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 import os
+import gc
+import time
 
 # Import your existing modules
 from NN_trainers.multVAE_DA_trainer import train as train_multvae_da
@@ -116,9 +118,18 @@ def run_grid_search(args):
                     latent_dim_domain=params['latent_dim_domain'],
                     mi_logvar=params['mi_logvar']
                 )
-            avg_b_acc += b_acc / 5.0  # Average over 5 folds
+            avg_b_acc += float(b_acc) / 5.0  # Average over 5 folds
             if metrics and 'ndcg@10' in metrics:
-                avg_ndcg10 += metrics['ndcg@10'] / 5.0  # Average NDCG@10 over 5 folds
+                avg_ndcg10 += float(metrics['ndcg@10']) / 5.0  # Average NDCG@10 over 5 folds
+
+            del train_dataset, val_dataset, test_dataset
+            del train_user_info, val_user_info, test_user_info
+
+            gc.collect()
+
+            torch.cuda.empty_cache()
+
+            time.sleep(60)
 
 
         # 4. Record Results
