@@ -11,8 +11,6 @@ from NN_trainers.multVAE_trainer import train as train_multvae
 from DataLoaders.ML1M_loader import get_dataset_dataloaders
 
 def run_grid_search(args):
-    # 1. Define the Hyperparameter Grid
-    # You can easily add or modify parameters here
     _param_grid = {
     # 'mi_logvar': [-1, -1.5],
     # 'club_weight': [100.0, 200.0, 500.0], 
@@ -41,8 +39,6 @@ def run_grid_search(args):
     
     print(f"Starting Grid Search with {len(combinations)} combinations...")
     
-    # 2. Load the Dataset
-    # We use global_indexing=False and grab the first fold for the grid search
     print(f"Loading dataset: {args.dataset}")
     train_loader_list, val_loader_list, test_loader_list, train_info, val_info, test_info = \
         get_dataset_dataloaders(global_indexing=False, dataset=args.dataset)
@@ -116,12 +112,11 @@ def run_grid_search(args):
                     latent_dim_domain=params['latent_dim_domain'],
                     mi_logvar=params['mi_logvar']
                 )
-            avg_b_acc += b_acc / 5.0  # Average over 5 folds
+            avg_b_acc += b_acc / 5.0  # Average bacc over 5 folds
             if metrics and 'ndcg@10' in metrics:
                 avg_ndcg10 += metrics['ndcg@10'] / 5.0  # Average NDCG@10 over 5 folds
 
 
-        # 4. Record Results
         result_entry = {
             **params,
             'balanced_accuracy': avg_b_acc,
@@ -134,17 +129,16 @@ def run_grid_search(args):
         file_exists = os.path.isfile(f"progress_{args.output_file}")
         df_entry.to_csv(f"progress_{args.output_file}", index=False, mode="a", header=not file_exists)
 
-    # 5. Save Results to CSV
+    # save Results to CSV
     df_results = pd.DataFrame(results)
     
-    # Sort the dataframe so the best NDCG@10 models are at the top
+    # sort the dataframe so the best NDCG@10 models are at the top
     if 'ndcg@10' in df_results.columns:
         df_results = df_results.sort_values(by=['ndcg@10'], ascending=False)
         
     df_results.to_csv(f"final_{args.output_file}", index=False)
     print(f"\nGrid search complete! Results saved to {args.output_file}")
     
-    # Print the top 3 configurations
     print("\nTop 3 Configurations by NDCG@10 (if available):")
     print(df_results.head(3))
 
