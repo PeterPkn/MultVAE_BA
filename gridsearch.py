@@ -125,7 +125,7 @@ def run_grid_search(args):
 
             torch.cuda.empty_cache()
 
-            time.sleep(60)
+            time.sleep(10)
 
 
         result_entry = {
