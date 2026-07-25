@@ -114,11 +114,7 @@ def run_grid_search(args):
                     latent_dim_domain=params['latent_dim_domain'],
                     mi_logvar=params['mi_logvar']
                 )
-<<<<<<< HEAD
-            avg_b_acc += b_acc / 5.0  # Average bacc over 5 folds
-=======
             avg_b_acc += float(b_acc) / 5.0  # Average over 5 folds
->>>>>>> 86345f1b079af7ccf6fc5fbde9d4bb41549b5841
             if metrics and 'ndcg@10' in metrics:
                 avg_ndcg10 += float(metrics['ndcg@10']) / 5.0  # Average NDCG@10 over 5 folds
 
