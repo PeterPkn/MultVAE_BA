@@ -22,7 +22,7 @@ def reparameterize(mu, logvar):
 
     return mu + eps * std
 
-def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_name, metric2_values, test_performance, test_bias):
+def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_name, metric2_values, test_performance, test_bias, club_weight):
     """
     Writes training configuration, per-epoch metrics, and final results to a log file.
     
@@ -35,6 +35,7 @@ def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_n
         metric2_values (list): List of metric 2 values per epoch.
         test_performance (float): Final performance on the test set.
         test_bias (float): Final bias calculation on the test set.
+        club_weight (float): The CLUB weight used in training.
     """
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     with open(f"{filepath}_{timestamp}.txt", 'x') as f:
@@ -64,6 +65,7 @@ def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_n
         f.write("================================================================================\n")
         f.write(f"Test Performance:       {test_performance:.6f}\n")
         f.write(f"Test Bias:              {test_bias:.6f}\n")
+        f.write(f"CLUB Weight:            {club_weight:.6f}\n")
         f.write("================================================================================\n")
 
     print(f"Log saved successfully to {filepath}")
@@ -378,7 +380,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             # if abs(b_acc-0.5) < abs(best_bacc-0.5) and j+1 > epochs/3:
             #     print(f"New lowest bias: {b_acc} at epoch {j+1}")
             #     best_bacc = b_acc
-            # bacc_metrics.append(b_acc)
+            bacc_metrics.append(b_acc)
             # score = calculate_performance_score(b_acc, result.aggregated_metrics['ndcg@10'], best_bacc, best_ndcg)
             # #print(score)
             # if score > best_score and j+1 > epochs/2:
@@ -462,6 +464,7 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
 
     features_for_pca = []
     lables_for_visual = []
+    all_results = {"ndcg@10": 0.0, "recall@10": 0.0}
     # check performance on test set after training is complete
     if test_loader is not None and test_user_info is not None:
         model.eval()
@@ -480,7 +483,7 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
             #print(f'Test Metrics: {all_results}')
         
         b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Test Set")
-        save_training_log(f"multVAE_DA", infostr, "balanced accuracy", bacc_metrics, "NDCG@10", ndcg_metrics, all_results["ndcg@10"], b_acc)
+        save_training_log(f"multVAE_DA", infostr, "balanced accuracy", bacc_metrics, "NDCG@10", ndcg_metrics, all_results["ndcg@10"], b_acc, club_weight)
         print(f"Test Set NDCG@10: {all_results['ndcg@10']:.4f}, Recall@10: {all_results['recall@10']:.4f}")
         print(f"Final Balanced Accuracy for bias prediction on Test Set: {b_acc:.4f}")
         print('-------------------------------')
