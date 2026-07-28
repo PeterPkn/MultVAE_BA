@@ -22,7 +22,7 @@ def reparameterize(mu, logvar):
 
     return mu + eps * std
 
-def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_name, metric2_values, test_performance, test_bias, club_weight):
+def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_name, metric2_values, test_performance, test_bias):
     """
     Writes training configuration, per-epoch metrics, and final results to a log file.
     
@@ -65,7 +65,6 @@ def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_n
         f.write("================================================================================\n")
         f.write(f"Test Performance:       {test_performance:.6f}\n")
         f.write(f"Test Bias:              {test_bias:.6f}\n")
-        f.write(f"CLUB Weight:            {club_weight:.6f}\n")
         f.write("================================================================================\n")
 
     print(f"Log saved successfully to {filepath}")
@@ -458,6 +457,7 @@ Total Epochs:           {epochs}
 Dropout Rate:           {dropout}
 KL Anneal Steps:        {total_anneal_steps}
 KL Anneal Cap:          {anneal_cap}
+CLUB Weight:            {club_weight}
 Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
 ================================================================================
 """
@@ -483,7 +483,7 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
             #print(f'Test Metrics: {all_results}')
         
         b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Test Set")
-        save_training_log(f"multVAE_DA", infostr, "balanced accuracy", bacc_metrics, "NDCG@10", ndcg_metrics, all_results["ndcg@10"], b_acc, club_weight)
+        save_training_log(f"multVAE_DA", infostr, "balanced accuracy", bacc_metrics, "NDCG@10", ndcg_metrics, all_results["ndcg@10"], b_acc)
         print(f"Test Set NDCG@10: {all_results['ndcg@10']:.4f}, Recall@10: {all_results['recall@10']:.4f}")
         print(f"Final Balanced Accuracy for bias prediction on Test Set: {b_acc:.4f}")
         print('-------------------------------')
