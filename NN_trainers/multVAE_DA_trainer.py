@@ -236,19 +236,22 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             batch_size = x_data.shape[0]
             model.eval()
             domain_pred_logvar = torch.full_like(torch.ones(x_data.shape[0], latent_dim_domain), mi_logvar).to(device)
-            for _ in range(5):
-                model.zero_grad()
+            with torch.no_grad():
                 _, mu_mipass, logvar_mipass, _, mu_domain_mipass, logvar_domain_mipass = model(x_data)
-                sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass).detach()
+            target_domain = mu_domain_mipass.detach()
+
+            for _ in range(5):
+                mi_model.zero_grad()
+                sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass)
                 sample_z_mipass = sample_z_mipass.to(device)
-                target_domain = mu_domain_mipass.detach()
-                #domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
                 domain_pred_mu_mipass = mi_model(sample_z_mipass)
                 mi_loss = -torch.mean(log_likelihood(target_domain, domain_pred_mu_mipass, domain_pred_logvar)) # negative log likelihood
                 mi_loss.backward()
                 mi_optim.step()
+
             model.train()
             model.zero_grad()
+            
             recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, _ = model(x_data)
             # Compute VAE loss
             if total_anneal_steps > 0:
