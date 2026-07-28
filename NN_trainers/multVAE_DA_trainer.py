@@ -375,16 +375,16 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
                     best_ndcg = result.aggregated_metrics['ndcg@10']
             b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Validation Set")
             
-            if abs(b_acc-0.5) < abs(best_bacc-0.5) and j+1 > epochs/3:
-                print(f"New lowest bias: {b_acc} at epoch {j+1}")
-                best_bacc = b_acc
-            bacc_metrics.append(b_acc)
-            score = calculate_performance_score(b_acc, result.aggregated_metrics['ndcg@10'], best_bacc, best_ndcg)
-            #print(score)
-            if score > best_score and j+1 > epochs/2:
-                best_epoch = j+1
-                best_model = model.state_dict()
-                best_score = score
+            # if abs(b_acc-0.5) < abs(best_bacc-0.5) and j+1 > epochs/3:
+            #     print(f"New lowest bias: {b_acc} at epoch {j+1}")
+            #     best_bacc = b_acc
+            # bacc_metrics.append(b_acc)
+            # score = calculate_performance_score(b_acc, result.aggregated_metrics['ndcg@10'], best_bacc, best_ndcg)
+            # #print(score)
+            # if score > best_score and j+1 > epochs/2:
+            #     best_epoch = j+1
+            #     best_model = model.state_dict()
+            #     best_score = score
 
             features_for_pca = []
             lables_for_visual = []
@@ -394,8 +394,8 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
     # get some random samples from the latent space to train the adversarial network on
     #f"Best epoch: {best_epoch}")
-    print(f"Best epoch {best_epoch} with score {best_score}, having best joint performance against at most ndcg {best_ndcg}, bacc {best_bacc}")
-    model.load_state_dict(best_model)  # Load the best model weights before extracting features
+    # print(f"Best epoch {best_epoch} with score {best_score}, having best joint performance against at most ndcg {best_ndcg}, bacc {best_bacc}")
+    # model.load_state_dict(best_model)  # Load the best model weights before extracting features
     if prioritize_bias:
         #print("Prioritizing bias in feature extraction by loading the last model weights...")
         model.load_state_dict(last_model)  # Load the last model weights if prioritizing bias
