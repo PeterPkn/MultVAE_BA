@@ -77,7 +77,7 @@ if __name__ == "__main__":
             results_bacc = []
             results_metrics = []
             for idx, fold in enumerate(train_loader):
-                b_acc, metrics = train_multvae_da(epochs=epochs, train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), train_user_info=train_user_info[idx], val_user_info=val_user_info[idx], test_user_info=test_user_info[idx], val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*120, anneal_cap=args.anneal_cap, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias, latent_dim_domain=args.latent_dim_domain, mi_estimator=args.mi_estimator, dropout=args.dropout)
+                b_acc, metrics = train_multvae_da(epochs=epochs, train_loader=DataLoader(fold, batch_size=args.batch_size, shuffle=True), train_user_info=train_user_info[idx], val_user_info=val_user_info[idx], test_user_info=test_user_info[idx], val_loader=DataLoader(val_loader[idx], batch_size=args.batch_size, shuffle=False), test_loader=DataLoader(test_loader[idx], batch_size=args.batch_size, shuffle=False), anneal_steps=len(fold)*45, anneal_cap=args.anneal_cap, club_weight=args.club_weight, prioritize_bias=args.prioritize_bias, latent_dim_domain=args.latent_dim_domain, mi_estimator=args.mi_estimator, dropout=args.dropout)
                 results_bacc.append(b_acc)
                 results_metrics.append(metrics)
             print(f"Average Balanced Accuracy on Bias Prediction Task across folds: {np.mean(results_bacc):.4f}")
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         val_loader = val_loader[0]
         test_loader = test_loader[0]
         train_user_info = train_user_info[0]
-        club_weights = [0.1, 0.5, 1.0, 5.0, 10.0, 50.0, 100.0]
+        club_weights = [0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0]
         epochs = args.epochs
         all_results = {w: [] for w in club_weights}
         for club_weight in tqdm(club_weights):
