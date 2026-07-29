@@ -184,6 +184,11 @@ def run_grid_search(args):
             del train_dataset, val_dataset, test_dataset
             del train_user_info, val_user_info, test_user_info
 
+            del features_for_pca, lables_for_visual
+            del X_train_scaled, X_test_scaled
+            del adv_model, adv_optim, adv_loss
+            del predictions_test, all_preds, all_true
+
             gc.collect()
 
             torch.cuda.empty_cache()
