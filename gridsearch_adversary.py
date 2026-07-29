@@ -85,7 +85,15 @@ def run_grid_search(args):
             model.eval()
             for _, (x_data, _, idx) in enumerate(train_dataset):
                     x_data = torch.FloatTensor(x_data).to(device)
-                    _, mu, logvar, _, _, _ = model(x_data)
+                    mu = None
+                    if args.model_type == 'multvae':
+                        _, mu, _ = model(x_data)
+                    elif args.model_type == 'multvae_da':
+                        _, mu, _, _, _, _ = model(x_data)
+                    elif args.model_type == 'multvae_adv':
+                        _, mu, _, _ = model(x_data)
+                    if mu is None:
+                        raise ValueError(f"Model did not return mu for model_type: {args.model_type}")
                     features_for_pca.extend(mu.cpu().detach().numpy().tolist())
                     lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].tolist())
 
@@ -142,7 +150,15 @@ def run_grid_search(args):
             lables_for_visual = []
             for _, (x_data, _, idx) in enumerate(test_dataset):
                     x_data = torch.FloatTensor(x_data).to(device)
-                    _, mu, logvar = model(x_data)
+                    mu = None
+                    if args.model_type == 'multvae':
+                        _, mu, _ = model(x_data)
+                    elif args.model_type == 'multvae_da':
+                        _, mu, _, _, _, _ = model(x_data)
+                    elif args.model_type == 'multvae_adv':
+                        _, mu, _, _ = model(x_data)
+                    if mu is None:
+                        raise ValueError(f"Model did not return mu for model_type: {args.model_type}")
                     features_for_pca.extend(mu.cpu().detach().numpy().tolist())
                     lables_for_visual.extend(test_user_info.iloc[idx.numpy()]['gender'].tolist())
 
