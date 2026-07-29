@@ -85,7 +85,7 @@ def run_grid_search(args):
             model.eval()
             for _, (x_data, _, idx) in enumerate(train_dataset):
                     x_data = torch.FloatTensor(x_data).to(device)
-                    _, mu, logvar = model(x_data)
+                    _, mu, logvar, _, _, _ = model(x_data)
                     features_for_pca.extend(mu.cpu().detach().numpy().tolist())
                     lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].tolist())
 
