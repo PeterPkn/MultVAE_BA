@@ -1,5 +1,6 @@
 import argparse
 import itertools
+from xml.parsers.expat import model
 import pandas as pd
 from NeuralNetworks.ADV_net import ADV_net
 from NeuralNetworks.multVAE import MultVAE
@@ -35,8 +36,7 @@ def run_grid_search(args):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     model = MultVAE(standard_model, latent_dim=200, dropout=0.6, training=True)
-    model.load_state_dict(torch.load(args.model_path, map_location=device))
-
+    model.load_state_dict(torch.load(args.model_path, map_location=device, weights_only=True))
     keys = list(param_grid.keys())
     combinations = list(itertools.product(*(param_grid[k] for k in keys)))
     
@@ -72,7 +72,7 @@ def run_grid_search(args):
             lables_for_visual = []
             model.eval()
             for _, (x_data, _, idx) in enumerate(train_dataset):
-                    x_data = x_data.to(device)
+                    x_data = torch.FloatTensor(x_data).to(device)
                     _, mu, logvar = model(x_data)
                     features_for_pca.extend(mu.cpu().detach().numpy().tolist())
                     lables_for_visual.extend(train_user_info.iloc[idx.numpy()]['gender'].tolist())
@@ -130,6 +130,32 @@ def run_grid_search(args):
             lables_for_visual = []
             for _, (x_data, _, idx) in enumerate(test_dataset):
                     x_data = x_data.to(device)
+                    _, mu, logvar = model(x_data)
+                    features_for_pca.extend(mu.cpu().detach().numpy().tolist())
+                    lables_for_visual.extend(test_user_info.iloc[idx.numpy()]['gender'].tolist())for _ in tqdm(range(params['adv_epochs'])):
+                permuted_indices = np.random.permutation(X_train_scaled.shape[0])
+                training_samples = X_train_scaled[permuted_indices]
+                training_labels = lables_for_visual[permuted_indices]
+                for batch in range(np.ceil(X_train_scaled.shape[0]/args.batch_size).astype(int)):
+                    
+                    x_data = torch.from_numpy(training_samples[batch*args.batch_size:np.min([batch*args.batch_size+args.batch_size, training_samples.shape[0]])])
+                    y_data = torch.from_numpy(training_labels[batch*args.batch_size:np.min([batch*args.batch_size+args.batch_size, training_labels.shape[0]])]).long()
+
+                    x_data = x_data.to(device)
+                    y_data = y_data.to(device)
+
+                    adv_optim.zero_grad()
+                    predictions = adv_model(x_data)
+                    loss = adv_loss(predictions, y_data)
+
+                    loss.backward()
+                    adv_optim.step()
+            b_acc = 0.0
+
+            features_for_pca = []
+            lables_for_visual = []
+            for _, (x_data, _, idx) in enumerate(test_dataset):
+                    x_data = torch.FloatTensor(x_data).to(device)
                     _, mu, logvar = model(x_data)
                     features_for_pca.extend(mu.cpu().detach().numpy().tolist())
                     lables_for_visual.extend(test_user_info.iloc[idx.numpy()]['gender'].tolist())
