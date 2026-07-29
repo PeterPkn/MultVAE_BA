@@ -94,11 +94,11 @@ def adv_net_testing(features, labels, device, latent_dim, label):
     #np.save('features_for_advnet_multvae_da', features)
     #np.save('labeles_for_advnet_multvae_da', lables)
 
-    adv_model = ADV_net(latent_dim, 100)
+    adv_model = ADV_net(200, 100, dropout=0.5)
     adv_optim = optim.Adam(
         adv_model.parameters(),
-        lr=1e-3,
-        weight_decay=0.0
+        lr=5e-4,
+        weight_decay=1e-5
     )
 
     weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
@@ -411,6 +411,8 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
     b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Training Set")
     print(f"{datetime.now().strftime('%H:%M:%S')} Final Balanced Accuracy for bias prediction on Training Set: {b_acc:.4f}")
+
+    
 
 
     #print(features_for_pca.shape)

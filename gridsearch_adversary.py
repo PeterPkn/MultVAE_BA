@@ -176,14 +176,14 @@ def run_grid_search(args):
     # save Results to CSV
     df_results = pd.DataFrame(results)
     
-    # sort the dataframe so the best NDCG@10 models are at the top
-    if 'ndcg@10' in df_results.columns:
-        df_results = df_results.sort_values(by=['ndcg@10'], ascending=False)
+    if 'balanced_accuracy' in df_results.columns:
+        df_results = df_results.sort_values(by=['balanced_accuracy'], ascending=False)
         
     df_results.to_csv(f"final_{args.output_file}", index=False)
+    
     print(f"\nGrid search complete! Results saved to {args.output_file}")
     
-    print("\nTop 3 Configurations by NDCG@10 (if available):")
+    print("\nTop 3 Configurations by Balanced Accuracy (if available):")
     print(df_results.head(3))
 
 if __name__ == "__main__":
