@@ -61,10 +61,10 @@ def run_grid_search(args):
             if args.skip_epoch > 0 and fold + 1 == args.skip_epoch:
                 print(f"Skipping fold {fold+1} as per --skip_epoch argument.")
                 continue
-            train_dataset = train_loader_list[fold]
-            val_dataset = val_loader_list[fold]
-            test_dataset = test_loader_list[fold]
-            
+            train_dataset = DataLoader(train_loader_list[fold], batch_size=params['batch_size'], shuffle=True)
+            val_dataset = DataLoader(val_loader_list[fold], batch_size=params['batch_size'], shuffle=False)
+            test_dataset = DataLoader(test_loader_list[fold], batch_size=params['batch_size'], shuffle=False)
+
             train_user_info = train_info[fold]
             val_user_info = val_info[fold]
             test_user_info = test_info[fold]
