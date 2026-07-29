@@ -34,6 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--mi_estimator", type=str, default="L1Out", help='Mutual information estimator to use in CLUB penalty (default: L1Out), options: L1Out, CLUB, MINE, VUB')
     parser.add_argument('--dropout', type=float, default=0.5, help='Dropout probability')
     parser.add_argument('--alpha', type=float, default=1.0, help='Dropout probability')
+    parser.add_argument('--anneal_steps', type=int, default=45, help='Number of steps for KL divergence annealing in terms of epochs (default: 45)')
     # parse arguments
     args = parser.parse_args()
 
