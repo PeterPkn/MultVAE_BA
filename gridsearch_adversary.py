@@ -4,6 +4,8 @@ from xml.parsers.expat import model
 import pandas as pd
 from NeuralNetworks.ADV_net import ADV_net
 from NeuralNetworks.multVAE import MultVAE
+from NeuralNetworks.multVAE_ADV import MultVAE_ADV
+from NeuralNetworks.multVAE_DA import MultVAE_DA
 import torch
 from torch.utils.data import DataLoader
 from torch import optim
@@ -34,8 +36,17 @@ def run_grid_search(args):
 
     standard_model = [3416, 600, 200]
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    model = None
+    if args.model_type == 'multvae':
+        model = MultVAE(standard_model, latent_dim=200, dropout=0.6, training=True)
+    elif args.model_type == 'multvae_da':
+        model = MultVAE_DA(standard_model, latent_dim=200, dropout=0.6, training=True, latent_dim_domain=200)
+    elif args.model_type == 'multvae_adv':
+        model = MultVAE_ADV(standard_model, latent_dim=200, dropout=0.6, training=True, alpha=2300.0, adv_net_dim=100)
 
-    model = MultVAE(standard_model, latent_dim=200, dropout=0.6, training=True)
+    if model is None:
+        raise ValueError(f"Invalid model_type: {args.model_type}. Choose from 'multvae', 'multvae_da', or 'multvae_adv'.")
+
     model.load_state_dict(torch.load(args.model_path, map_location=device, weights_only=True))
     model.to(device)
     keys = list(param_grid.keys())
@@ -188,6 +199,7 @@ def run_grid_search(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Grid Search for multVAE_DA model")
+    parser.add_argument('--model_type', type=str, choices=['multvae', 'multvae_da'], default='multvae_da', help='Type of model to train (default: multvae_da)')
     parser.add_argument('--dataset', type=str, default='ml-1m', help='Dataset to use (default: ml-1m)')
     #parser.add_argument('--epochs', type=int, default=50, help='Number of training epochs per combination')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
