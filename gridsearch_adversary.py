@@ -199,7 +199,7 @@ def run_grid_search(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Grid Search for multVAE_DA model")
-    parser.add_argument('--model_type', type=str, choices=['multvae', 'multvae_da'], default='multvae_da', help='Type of model to train (default: multvae_da)')
+    parser.add_argument('--model_type', type=str, choices=['multvae', 'multvae_da', 'multvae_adv'], default='multvae_da', help='Type of model to train (default: multvae_da)', required=True)
     parser.add_argument('--dataset', type=str, default='ml-1m', help='Dataset to use (default: ml-1m)')
     #parser.add_argument('--epochs', type=int, default=50, help='Number of training epochs per combination')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
