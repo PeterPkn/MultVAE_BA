@@ -63,7 +63,6 @@ def run_grid_search(args):
                 
         print(f"Loaded {len(completed_combos)} previously completed combinations.")
 
-    # 3. Iterate through all combinations
     for i, combo in enumerate(combinations):
         params = dict(zip(keys, combo))
         print(f"\n--- Running Combination {i+1}/{len(combinations)} ---")

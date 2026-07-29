@@ -110,6 +110,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     features_for_pca = []
     lables_for_visual = []
     model.load_state_dict(best_model)  # Load the best model weights before extracting features
+    model.save_state_dict(best_model, f"multvae_adv_grid.pth")  # Save the best model weights before extracting features
     model.eval()
     for _, (x_data, _, idx) in enumerate(train_loader):
             x_data = x_data.to(device)

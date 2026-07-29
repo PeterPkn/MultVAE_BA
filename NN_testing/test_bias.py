@@ -20,9 +20,9 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None, 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     standard_model = [3416, 600, 200]
     small_model_dim = [3416, 500]
-    model = MultVAE(standard_model, latent_dim=200, dropout=0.5, training=True)
+    model = MultVAE(standard_model, latent_dim=200, dropout=0.6, training=True)
     if small_model:
-            model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=0.5, training=True)
+            model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=0.6, training=True)
     model.load_state_dict(torch.load('./ml1m_multvae.pth', map_location=device))
     model.eval()
     model.to(device)
