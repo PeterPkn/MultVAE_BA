@@ -37,6 +37,7 @@ def run_grid_search(args):
 
     model = MultVAE(standard_model, latent_dim=200, dropout=0.6, training=True)
     model.load_state_dict(torch.load(args.model_path, map_location=device, weights_only=True))
+    model.to(device)
     keys = list(param_grid.keys())
     combinations = list(itertools.product(*(param_grid[k] for k in keys)))
     
