@@ -489,7 +489,13 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
         print(f"Test Set NDCG@10: {all_results['ndcg@10']:.4f}, Recall@10: {all_results['recall@10']:.4f}")
         print(f"Final Balanced Accuracy for bias prediction on Test Set: {b_acc:.4f}")
         print('-------------------------------')
-    PATH = './ml1m_multvae_DA.pth'
+    
+    dataset = 'ml1m'
+    if train_loader.dataset.num_items > 4000:
+        dataset = 'ekstrabladet'
+    if train_loader.dataset.num_items > 10000:
+        dataset = 'lfmdemobias'
+    PATH = f'./ml1m_multvae_DA_{dataset}.pth'
     torch.save(model.state_dict(), PATH)
 
     return b_acc, all_results

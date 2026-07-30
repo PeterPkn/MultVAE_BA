@@ -376,8 +376,13 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
 
     # check performance on test set after training is complete
     #model.load_state_dict(least_bias_model)  # Load the best model weights before testing
+    dataset = 'ml1m'
+    if train_loader.dataset.num_items > 4000:
+        dataset = 'ekstrabladet'
+    if train_loader.dataset.num_items > 10000:
+        dataset = 'lfmdemobias'
     if store_model:
-        PATH = './ml1m_multvae.pth'
+        PATH = f'./ml1m_multvae_ADV_{dataset}.pth'
         torch.save(model.state_dict(), PATH)
     if test_loader is not None:
         model.eval()

@@ -195,5 +195,5 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None, 
                 
             print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
 
-    PATH = './ml1m_multvae.pth'
+    PATH = './test_bias_model.pth'
     torch.save(model.state_dict(), PATH)
