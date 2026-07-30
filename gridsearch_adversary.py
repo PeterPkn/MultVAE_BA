@@ -31,10 +31,11 @@ def run_grid_search(args):
         'adv_epochs': [50, 100]           
     }
 
-    train_loader, _, _, train_user_info, val_user_info, test_user_info = get_dataset_dataloaders(global_indexing=False, dataset=args.dataset)
-        
+    print(f"Loading dataset: {args.dataset}")
+    train_loader_list, val_loader_list, test_loader_list, train_info, val_info, test_info = \
+        get_dataset_dataloaders(global_indexing=False, dataset=args.dataset)
 
-    standard_model = [3416, 600, 200]
+    standard_model = [train_loader_list[0].num_items, 600, 200]
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = None
     if args.model_type == 'multvae':
@@ -53,10 +54,6 @@ def run_grid_search(args):
     combinations = list(itertools.product(*(param_grid[k] for k in keys)))
     
     print(f"Starting Grid Search with {len(combinations)} combinations...")
-    
-    print(f"Loading dataset: {args.dataset}")
-    train_loader_list, val_loader_list, test_loader_list, train_info, val_info, test_info = \
-        get_dataset_dataloaders(global_indexing=False, dataset=args.dataset)
 
     results = []
 
