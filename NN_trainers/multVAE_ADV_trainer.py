@@ -382,7 +382,7 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
     if train_loader.dataset.num_items > 10000:
         dataset = 'lfmdemobias'
     if store_model:
-        PATH = f'./ml1m_multvae_ADV_{dataset}.pth'
+        PATH = f'./multvae_ADV_{dataset}_alpha_{alpha}.pth'
         torch.save(model.state_dict(), PATH)
     if test_loader is not None:
         model.eval()

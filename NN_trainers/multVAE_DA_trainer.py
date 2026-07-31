@@ -495,7 +495,7 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
         dataset = 'ekstrabladet'
     if train_loader.dataset.num_items > 10000:
         dataset = 'lfmdemobias'
-    PATH = f'./ml1m_multvae_DA_{dataset}.pth'
+    PATH = f'./multvae_DA_{dataset}_{mi_estimator}_{club_weight}.pth'
     torch.save(model.state_dict(), PATH)
 
     return b_acc, all_results
