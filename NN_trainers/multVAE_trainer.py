@@ -107,7 +107,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     update_count = 0
     optimizer = optim.Adam(
         model.parameters(),
-        lr=7e-3,           # Learning rate
+        lr=1e-3,           # Learning rate
         weight_decay=0.0   # MultVAE usually relies on Dropout/KL-divergence for regularization, not L2
     )
     print('Starting training...')
