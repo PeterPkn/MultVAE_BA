@@ -47,7 +47,7 @@ class MultVAE_ADV(nn.Module):
             self.decoder.append(nn.Tanh())
             self.decoder.append(nn.Linear(self.dec_dims[i], self.dec_dims[i + 1]))
 
-        self.adv_net = ADV_net(latent_dim, adv_net_dim)
+        self.adv_net = ADV_net(latent_dim, adv_net_dim, dropout=0.5)
         self.grad_rev = GradientReversal(alpha)
         
     def encoder_forward(self, x):

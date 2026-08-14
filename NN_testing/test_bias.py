@@ -20,9 +20,9 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None, 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     standard_model = [3416, 600, 200]
     small_model_dim = [3416, 500]
-    model = MultVAE(standard_model, latent_dim=200, dropout=0.5, training=True)
+    model = MultVAE(standard_model, latent_dim=200, dropout=0.6, training=True)
     if small_model:
-            model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=0.5, training=True)
+            model = MultVAE(small_model_dim, decoder_dims=[3416], latent_dim=200, dropout=0.6, training=True)
     model.load_state_dict(torch.load('./ml1m_multvae.pth', map_location=device))
     model.eval()
     model.to(device)
@@ -65,11 +65,11 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None, 
 
     # TRAIN ADV-net
 
-    adv_model = ADV_net(200, 100)
+    adv_model = ADV_net(200, 100, dropout=0.5)
     adv_optim = optim.Adam(
         adv_model.parameters(),
-        lr=1e-3,
-        weight_decay=0.0
+        lr=5e-4,
+        weight_decay=1e-5
     )
 
     weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
@@ -195,5 +195,5 @@ def test(train_loader, test_loader=None, val_loader=None, train_user_info=None, 
                 
             print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
 
-    PATH = './ml1m_multvae.pth'
+    PATH = './test_bias_model.pth'
     torch.save(model.state_dict(), PATH)

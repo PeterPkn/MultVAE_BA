@@ -35,6 +35,7 @@ def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_n
         metric2_values (list): List of metric 2 values per epoch.
         test_performance (float): Final performance on the test set.
         test_bias (float): Final bias calculation on the test set.
+        club_weight (float): The CLUB weight used in training.
     """
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     with open(f"{filepath}_{timestamp}.txt", 'x') as f:
@@ -93,11 +94,11 @@ def adv_net_testing(features, labels, device, latent_dim, label):
     #np.save('features_for_advnet_multvae_da', features)
     #np.save('labeles_for_advnet_multvae_da', lables)
 
-    adv_model = ADV_net(latent_dim, 100)
+    adv_model = ADV_net(200, 100, dropout=0.5)
     adv_optim = optim.Adam(
         adv_model.parameters(),
-        lr=1e-3,
-        weight_decay=0.0
+        lr=5e-4,
+        weight_decay=1e-5
     )
 
     weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
@@ -236,19 +237,26 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             batch_size = x_data.shape[0]
             model.eval()
             domain_pred_logvar = torch.full_like(torch.ones(x_data.shape[0], latent_dim_domain), mi_logvar).to(device)
-            for _ in range(5):
-                model.zero_grad()
+
+            # VAE forward pass to get z for MI training
+            with torch.no_grad():
                 _, mu_mipass, logvar_mipass, _, mu_domain_mipass, logvar_domain_mipass = model(x_data)
-                sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass).detach()
+            target_domain = mu_domain_mipass.detach()
+
+            for _ in range(5):
+                mi_model.zero_grad()
+                # Using sample of z for MI estimation
+                sample_z_mipass = reparameterize(mu=mu_mipass, logvar=logvar_mipass)
                 sample_z_mipass = sample_z_mipass.to(device)
-                target_domain = mu_domain_mipass.detach()
-                #domain_pred_mu_mipass, domain_pred_logvar_mipass = mi_model(sample_z_mipass)
                 domain_pred_mu_mipass = mi_model(sample_z_mipass)
+                # Log-likelihood loss for mutual information estimation
                 mi_loss = -torch.mean(log_likelihood(target_domain, domain_pred_mu_mipass, domain_pred_logvar)) # negative log likelihood
                 mi_loss.backward()
                 mi_optim.step()
+
             model.train()
             model.zero_grad()
+
             recon_batch_featureoptim, mu_featureoptim, logvar_featureoptim, _, mu_domain_featureoptim, _ = model(x_data)
             # Compute VAE loss
             if total_anneal_steps > 0:
@@ -293,13 +301,24 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             # q_yi_xi is the diagonal (where i == j)
             q_yi_xi = torch.diag(pairwise_ll)
 
+            off_diag_mask = ~torch.eye(batch_size, dtype=torch.bool, device=device)
+
+
             # q_yj_xi is the mean of the off-diagonals
             #row_sums = torch.sum(pairwise_ll, dim=1)
             #q_yj_xi = (row_sums - q_yi_xi) / (batch_size - 1)
             #bound = torch.mean(q_yi_xi - q_yj_xi)
 
             # Toggle the estimator here
-            if mi_estimator == "L1Out": # Leave-One-Out CLUB
+            if mi_estimator == "L1Out": 
+                # True Leave-One-Out Upper Bound (Requires logsumexp)
+                # We mask the diagonal with -infinity so it contributes 0 to the sum in exp space
+                masked_ll = pairwise_ll.masked_fill(~off_diag_mask, float('-inf'))
+                
+                # log( 1/(N-1) * sum_{j!=i} p(y_i|x_j) )
+                log_marginal_approx = torch.logsumexp(masked_ll, dim=1) - np.log(batch_size - 1)
+                bound = torch.mean(q_yi_xi - log_marginal_approx)
+            elif mi_estimator == "CL1Out": # Leave-One-Out CLUB
                 row_sums = torch.sum(pairwise_ll, dim=1)
                 q_yj_xi = (row_sums - q_yi_xi) / (batch_size - 1)
                 bound = torch.mean(q_yi_xi - q_yj_xi)
@@ -309,14 +328,18 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
                 bound = torch.mean(q_yi_xi - q_yj_xi)
 
             elif mi_estimator == "MINE":
-                off_diag_mask = ~torch.eye(batch_size, dtype=torch.bool, device=device)
                 off_diag_ll = pairwise_ll[off_diag_mask]
                 marginal_term = torch.logsumexp(off_diag_ll, dim=0) - np.log(batch_size * (batch_size - 1))
                 bound = torch.mean(q_yi_xi) - marginal_term
 
             elif mi_estimator == "VUB": # Variational Upper Bound
-                marginal_approx = torch.logsumexp(pairwise_ll, dim=1) - np.log(batch_size)
-                bound = torch.mean(q_yi_xi - marginal_approx)
+                # Variational Upper Bound (Uses a fixed unit Gaussian prior r(y))
+                # y_i is target_domain_featureoptim (shape: [B, latent_dim_domain])
+                prior_ll = -0.5 * torch.sum(
+                    target_domain_featureoptim**2 + np.log(2 * np.pi), 
+                    dim=1
+                )
+                bound = torch.mean(q_yi_xi - prior_ll)
 
 
 
@@ -353,16 +376,16 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
                     best_ndcg = result.aggregated_metrics['ndcg@10']
             b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Validation Set")
             
-            if abs(b_acc-0.5) < abs(best_bacc-0.5) and j+1 > epochs/3:
-                print(f"New lowest bias: {b_acc} at epoch {j+1}")
-                best_bacc = b_acc
+            # if abs(b_acc-0.5) < abs(best_bacc-0.5) and j+1 > epochs/3:
+            #     print(f"New lowest bias: {b_acc} at epoch {j+1}")
+            #     best_bacc = b_acc
             bacc_metrics.append(b_acc)
-            score = calculate_performance_score(b_acc, result.aggregated_metrics['ndcg@10'], best_bacc, best_ndcg)
-            #print(score)
-            if score > best_score and j+1 > epochs/2:
-                best_epoch = j+1
-                best_model = model.state_dict()
-                best_score = score
+            # score = calculate_performance_score(b_acc, result.aggregated_metrics['ndcg@10'], best_bacc, best_ndcg)
+            # #print(score)
+            # if score > best_score and j+1 > epochs/2:
+            #     best_epoch = j+1
+            #     best_model = model.state_dict()
+            #     best_score = score
 
             features_for_pca = []
             lables_for_visual = []
@@ -372,8 +395,8 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
     # get some random samples from the latent space to train the adversarial network on
     #f"Best epoch: {best_epoch}")
-    print(f"Best epoch {best_epoch} with score {best_score}, having best joint performance against at most ndcg {best_ndcg}, bacc {best_bacc}")
-    model.load_state_dict(best_model)  # Load the best model weights before extracting features
+    # print(f"Best epoch {best_epoch} with score {best_score}, having best joint performance against at most ndcg {best_ndcg}, bacc {best_bacc}")
+    # model.load_state_dict(best_model)  # Load the best model weights before extracting features
     if prioritize_bias:
         #print("Prioritizing bias in feature extraction by loading the last model weights...")
         model.load_state_dict(last_model)  # Load the last model weights if prioritizing bias
@@ -388,6 +411,8 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
     b_acc = adv_net_testing(features_for_pca, lables_for_visual, device, latent_dim, label="Training Set")
     print(f"{datetime.now().strftime('%H:%M:%S')} Final Balanced Accuracy for bias prediction on Training Set: {b_acc:.4f}")
+
+    
 
 
     #print(features_for_pca.shape)
@@ -434,12 +459,14 @@ Total Epochs:           {epochs}
 Dropout Rate:           {dropout}
 KL Anneal Steps:        {total_anneal_steps}
 KL Anneal Cap:          {anneal_cap}
+CLUB Weight:            {club_weight}
 Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
 ================================================================================
 """
 
     features_for_pca = []
     lables_for_visual = []
+    all_results = {"ndcg@10": 0.0, "recall@10": 0.0}
     # check performance on test set after training is complete
     if test_loader is not None and test_user_info is not None:
         model.eval()
@@ -462,7 +489,13 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
         print(f"Test Set NDCG@10: {all_results['ndcg@10']:.4f}, Recall@10: {all_results['recall@10']:.4f}")
         print(f"Final Balanced Accuracy for bias prediction on Test Set: {b_acc:.4f}")
         print('-------------------------------')
-    PATH = './ml1m_multvae_DA.pth'
+    
+    dataset = 'ml1m'
+    if train_loader.dataset.num_items > 4000:
+        dataset = 'ekstrabladet'
+    if train_loader.dataset.num_items > 10000:
+        dataset = 'lfmdemobias'
+    PATH = f'./multvae_DA_{dataset}_{mi_estimator}_{club_weight}.pth'
     torch.save(model.state_dict(), PATH)
 
     return b_acc, all_results

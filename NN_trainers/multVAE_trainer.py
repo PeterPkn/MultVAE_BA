@@ -1,6 +1,7 @@
 import os
 import random
 import torch
+import datetime
 from NeuralNetworks.multVAE import MultVAE
 import torch.optim as optim
 import torch.nn.functional as F
@@ -8,6 +9,52 @@ from rmet import BatchEvaluator
 import numpy as np
 from tqdm import tqdm
 from NeuralNetworks.ADV_net import ADV_net
+
+def save_training_log(filepath, infostr, metric1_name, metric1_values, metric2_name, metric2_values, test_performance, test_bias):
+    """
+    Writes training configuration, per-epoch metrics, and final results to a log file.
+    
+    Args:
+        filepath (str): Path to save the log file.
+        infostr (str): The configuration string generated at the start of training.
+        metric1_name (str): Name of the first metric (e.g., 'Train Loss').
+        metric1_values (list): List of metric 1 values per epoch.
+        metric2_name (str): Name of the second metric (e.g., 'Val NDCG').
+        metric2_values (list): List of metric 2 values per epoch.
+        test_performance (float): Final performance on the test set.
+        test_bias (float): Final bias calculation on the test set.
+    """
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    with open(f"{filepath}_{timestamp}.txt", 'x') as f:
+        # 1. Write the Header Info String
+        f.write(infostr.strip() + '\n\n')
+        
+        # 2. Write the Per-Epoch Metrics Table
+        f.write("================================================================================\n")
+        f.write("                               PER EPOCH METRICS\n")
+        f.write("================================================================================\n")
+        # Format table headers
+        f.write(f"{'Epoch':<10} | {metric1_name:<20} | {metric2_name:<20}\n")
+        f.write("-" * 80 + "\n")
+        
+        # Determine number of epochs (handles case where lists might slightly differ in length if interrupted)
+        epochs = max(len(metric1_values), len(metric2_values))
+        
+        # Write rows
+        for i in range(epochs):
+            m1 = f"{metric1_values[i]:.6f}" if i < len(metric1_values) else "N/A"
+            m2 = f"{metric2_values[i]:.6f}" if i < len(metric2_values) else "N/A"
+            f.write(f"{i+1:<10} | {m1:<20} | {m2:<20}\n")
+            
+        # 3. Write Final Test Results
+        f.write("\n================================================================================\n")
+        f.write("                               FINAL TEST RESULTS\n")
+        f.write("================================================================================\n")
+        f.write(f"Test Performance:       {test_performance:.6f}\n")
+        f.write(f"Test Bias:              {test_bias:.6f}\n")
+        f.write("================================================================================\n")
+
+    print(f"Log saved successfully to {filepath}")
 
 def reparameterize(mu, logvar):
     std = torch.exp(0.5 * logvar)
@@ -66,6 +113,8 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     print('Starting training...')
     best_result = 0.0
     best_model = None
+    ndcg_metrics = []
+    bacc_metrics = []
     for j in tqdm(range(epochs)):
         for i, (x_data, _, _) in enumerate(train_loader):
             x_data = x_data.to(device)
@@ -105,6 +154,7 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
                     best_result = result.aggregated_metrics['ndcg@10']
                     best_model = model.state_dict()  # Save the best model weights
                     #print(f'New best model found at epoch {j+1} with NDCG@10: {best_result:.4f}')
+                ndcg_metrics.append(result.aggregated_metrics['ndcg@10'])
             model.train()
 
     features_for_pca = []
@@ -133,11 +183,11 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
     features_train, features_test, lables_train, lables_test = train_test_split(features_for_pca, lables_for_visual, test_size=0.2, stratify=lables_for_visual)
 
     # TRAIN ADV-net
-    adv_model = ADV_net(200, 100)
+    adv_model = ADV_net(200, 100, dropout=0.5)
     adv_optim = optim.Adam(
         adv_model.parameters(),
-        lr=1e-3,
-        weight_decay=0.0
+        lr=5e-4,
+        weight_decay=1e-5
     )
 
     weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
@@ -187,12 +237,29 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
         b_acc = balanced_accuracy_score(all_true, all_preds)
         #print(f"Standardized Balanced Accuracy: {b_acc}")
 
-    
+        infostr = f"""
+================================================================================
+                            TRAINING CONFIGURATION
+================================================================================
+Model Type:             MultVAE (Biased)
+Latent Dim:             200
+Total Epochs:           {epochs}
+Dropout Rate:           {dropout}
+KL Anneal Steps:        {total_anneal_steps}
+KL Anneal Cap:          {anneal_cap}
+Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
+================================================================================
+"""
 
     # check performance on test set after training is complete
     model.load_state_dict(best_model)  # Load the best model weights before testing
+    dataset = 'ml1m'
+    if train_loader.dataset.num_items > 4000:
+        dataset = 'ekstrabladet'
+    if train_loader.dataset.num_items > 10000:
+        dataset = 'lfmdemobias'
     if store_model:
-        PATH = './ml1m_multvae.pth'
+        PATH = f'./ml1m_multvae_{dataset}.pth'
         torch.save(model.state_dict(), PATH)
     if test_loader is not None:
         model.eval()
@@ -206,6 +273,8 @@ def train(epochs, train_loader, test_loader=None, val_loader=None, train_user_in
                 batch_evaluator.eval_batch(np.arange(len_batch), recon_batch.cpu(), targets.cpu())
                 
             #print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
-            return b_acc, batch_evaluator.get_results().aggregated_metrics if test_loader is not None else None
+            perf_results = batch_evaluator.get_results().aggregated_metrics
+            save_training_log(filepath=f'./multvae_{dataset}_training_log', infostr=infostr, metric1_name='Balanced Accuracy', metric1_values=bacc_metrics, metric2_name='Val NDCG@10', metric2_values=ndcg_metrics, test_performance=perf_results['ndcg@10'], test_bias=b_acc)
+            return b_acc, perf_results
         
     return b_acc, None

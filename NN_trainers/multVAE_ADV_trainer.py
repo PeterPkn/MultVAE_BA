@@ -81,11 +81,11 @@ def adv_net_testing(features, labels, device, latent_dim, label):
     #np.save('features_for_advnet_multvae_da', features)
     #np.save('labeles_for_advnet_multvae_da', lables)
 
-    adv_model = ADV_net(latent_dim, 100)
+    adv_model = ADV_net(200, 100, dropout=0.5)
     adv_optim = optim.Adam(
         adv_model.parameters(),
-        lr=1e-3,
-        weight_decay=0.0
+        lr=5e-4,
+        weight_decay=1e-5
     )
 
     weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
@@ -182,8 +182,8 @@ def train(epochs, train_loader, train_user_info, test_loader=None, val_loader=No
 
     adv_optimizer = optim.Adam(
         model.adv_net.parameters(),
-        lr=1e-3,
-        weight_decay=0.0
+        lr=5e-4,
+        weight_decay=1e-5
     )
     infostr = f"""
 ================================================================================
@@ -318,11 +318,11 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
     features_train, features_test, lables_train, lables_test = train_test_split(features_for_pca, lables_for_visual, test_size=0.2, stratify=lables_for_visual)
 
     # TRAIN ADV-net
-    adv_model = ADV_net(200, 100)
+    adv_model = ADV_net(200, 100, dropout=0.5)
     adv_optim = optim.Adam(
         adv_model.parameters(),
-        lr=1e-3,
-        weight_decay=0.0
+        lr=5e-4,
+        weight_decay=1e-5
     )
 
     weights = torch.tensor([features_len/(2*(features_len-num_men)),features_len/(2*num_men)], dtype=torch.float32)
@@ -376,8 +376,13 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
 
     # check performance on test set after training is complete
     #model.load_state_dict(least_bias_model)  # Load the best model weights before testing
+    dataset = 'ml1m'
+    if train_loader.dataset.num_items > 4000:
+        dataset = 'ekstrabladet'
+    if train_loader.dataset.num_items > 10000:
+        dataset = 'lfmdemobias'
     if store_model:
-        PATH = './ml1m_multvae.pth'
+        PATH = f'./multvae_ADV_{dataset}_alpha_{alpha}.pth'
         torch.save(model.state_dict(), PATH)
     if test_loader is not None:
         model.eval()
