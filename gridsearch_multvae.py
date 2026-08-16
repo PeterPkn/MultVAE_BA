@@ -7,6 +7,9 @@ import os
 import gc
 import time
 
+
+# PIP install list: torch pandas numpy scipy scikit-learn rmet matplotlib tqdm
+
 # Import your existing modules
 from NN_trainers.multVAE_DA_trainer import train as train_multvae_da
 from NN_trainers.multVAE_trainer import train as train_multvae
