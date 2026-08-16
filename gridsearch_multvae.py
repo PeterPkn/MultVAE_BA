@@ -26,14 +26,14 @@ def run_grid_search(args):
     }
 
     param_grid = {
-    #'club_weight': [2.0, 5.0, 10.0, 15.0, 20.0], 
-    #'latent_dim_domain': [2, 50, 100, 200],
-    #'prioritize_bias': [True, False],
-    'anneal_cap': [0.1, 0.2, 0.4, 0.8],
-    'anneal_period': [30, 45, 60],
-    'batch_size': [128, 256, 512, 1024],
-    'epochs': [50, 100, 150],
-    'dropout': [0.0, 0.2, 0.4, 0.6]
+    'club_weight': [0.5, 0.7, 1.0, 1.5, 2.0, 5.0, 10.0], 
+    'latent_dim_domain': [200],
+    'prioritize_bias': [True],
+    'anneal_cap': [0.1],
+    'anneal_period': [45],
+    'batch_size': [1024],
+    'epochs': [100],
+    'dropout': [0.6]
     }
 
     keys = list(param_grid.keys())
@@ -143,9 +143,13 @@ def run_grid_search(args):
     df_results = pd.DataFrame(results)
     
     # sort the dataframe so the best NDCG@10 models are at the top
-    if 'ndcg@10' in df_results.columns:
-        df_results = df_results.sort_values(by=['ndcg@10'], ascending=False)
-        
+    if args.noDA:
+        if 'ndcg@10' in df_results.columns:
+            df_results = df_results.sort_values(by=['ndcg@10'], ascending=False)
+    else:
+        if 'balanced_accuracy' in df_results.columns:
+            df_results = df_results.sort_values(by=['balanced_accuracy'], ascending=False)
+            
     df_results.to_csv(f"final_{args.output_file}", index=False)
     print(f"\nGrid search complete! Results saved to {args.output_file}")
     
