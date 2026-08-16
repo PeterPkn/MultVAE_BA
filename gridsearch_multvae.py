@@ -29,7 +29,8 @@ def run_grid_search(args):
     }
 
     param_grid = {
-    'club_weight': [0.5, 0.7, 1.0, 1.5, 2.0, 5.0, 10.0], 
+    'club_weight': [0.1, 0.5, 0.7, 1.0, 1.5, 2.0, 5.0, 10.0],
+    'mi_logvar': [-1.0, -2.0, 0.0, 0.5, 1.0, 2.0],
     'latent_dim_domain': [200],
     'prioritize_bias': [True],
     'anneal_cap': [0.1],
