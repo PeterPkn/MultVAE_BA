@@ -117,7 +117,7 @@ def run_grid_search(args):
                     prioritize_bias=params['prioritize_bias'],
                     latent_dim_domain=params['latent_dim_domain'],
                     mi_logvar=params['mi_logvar'],
-                    mi_estimator='CLUB'
+                    mi_estimator=params['estimator']
                 )
             avg_b_acc += float(b_acc) / 5.0  # Average over 5 folds
             if metrics and 'ndcg@10' in metrics:
