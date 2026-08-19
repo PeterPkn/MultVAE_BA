@@ -30,7 +30,7 @@ def run_grid_search(args):
 
     param_grid = {
     'estimator': ['CLUB'],
-    'club_weight': [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4],
+    'club_weight': [0.05, 0.1, 0.25, 0.3, 0.5],
     'mi_logvar': [0.0],
     'latent_dim_domain': [200],
     'prioritize_bias': [True],
