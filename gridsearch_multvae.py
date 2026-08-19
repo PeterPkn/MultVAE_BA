@@ -29,8 +29,8 @@ def run_grid_search(args):
     }
 
     param_grid = {
-    'estimator': ['L1Out', 'MINE'],
-    'club_weight': [200.0, 400.0, 800.0, 1600.0, 3200.0],
+    'estimator': ['CLUB'],
+    'club_weight': [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4],
     'mi_logvar': [0.0],
     'latent_dim_domain': [200],
     'prioritize_bias': [True],
