@@ -498,4 +498,4 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
     PATH = f'./multvae_DA_{dataset}_{mi_estimator}_{club_weight}.pth'
     torch.save(model.state_dict(), PATH)
 
-    return b_acc, all_results
+    return b_acc, all_results, model

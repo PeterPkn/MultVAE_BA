@@ -103,7 +103,7 @@ def run_grid_search(args):
                     dropout=params['dropout']
                 )
             else:
-                b_acc, metrics = train_multvae_da(
+                b_acc, metrics, _ = train_multvae_da(
                     epochs=params['epochs'],
                     train_loader=DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True),
                     train_user_info=train_user_info,
