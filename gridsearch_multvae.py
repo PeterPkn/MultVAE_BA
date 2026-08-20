@@ -29,8 +29,8 @@ def run_grid_search(args):
     }
 
     param_grid = {
-    'estimator': ['CLUB'],
-    'club_weight': [0.1, 0.2, 0.3, 0.4, 0.5],
+    'estimator': ['CLUB', 'VUB', 'L1Out', 'MINE'],
+    'club_weight': [latent_dim_domain0.4, 1.0, 2.0, 3.0, 5.0],
     'mi_logvar': [0.0],
     'latent_dim_domain': [200],
     'prioritize_bias': [True],
@@ -40,6 +40,20 @@ def run_grid_search(args):
     'epochs': [100],
     'dropout': [0.6]
     }
+
+    if args.dataset == 'lfm-demobias':
+        param_grid = {
+            'estimator': ['CLUB', 'VUB', 'L1Out', 'MINE'],
+            'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
+            'mi_logvar': [0.0],
+            'latent_dim_domain': [200],
+            'prioritize_bias': [True],
+            'anneal_cap': [0.1],
+            'anneal_period': [60],
+            'batch_size': [1024],
+            'epochs': [50],
+            'dropout': [0.4]
+            }
 
     keys = list(param_grid.keys())
     combinations = list(itertools.product(*(param_grid[k] for k in keys)))

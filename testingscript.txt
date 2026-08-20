@@ -8,3 +8,13 @@
 & C:/Users/peter/.conda/envs/basics_of_pytorch/python.exe "C:\Users\peter\Documents\TU Wien\Bachelorarbeit\MultVAE_BA\main.py" --multvae_adv --epochs 100 --alpha 10.0
 
 echo DONE!!!
+
+python3 gridsearch_multvae.py --dataset ml-1m --output_file ml1m_club_gs.csv
+python3 gridsearch_multvae.py --dataset ekstrabladet --output_file ekstra_club_gs.csv
+python3 gridsearch_multvae.py --dataset lfm-demobias --output_file demobias_club_gs.csv
+echo done...
+
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --output_file ml1m_mi_measured_bias.csv --model_type multvae_da
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --output_file ekstra_mi_measured_bias.csv --model_type multvae_da
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --output_file demobias_mi_measured_bias.csv --model_type multvae_da
+echo done...
