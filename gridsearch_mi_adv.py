@@ -187,7 +187,7 @@ def run_grid_search(args):
 
                 if adv_b_acc >= max_bacc:
                     max_bacc = adv_b_acc
-                    best_model_state = copy.deepcopy(adv_model.state_dict())
+                    best_model = copy.deepcopy(adv_model.state_dict())
                     best_adv_hidden = params['hidden_dim']
                     best_adv_dropout = params['dropout']
 
@@ -222,7 +222,7 @@ def run_grid_search(args):
                 final_adv.eval()
                 with torch.no_grad():
                     X_test_scaled = torch.from_numpy(X_test_scaled).to(device)
-                    predictions_test = best_model(X_test_scaled)
+                    predictions_test = final_adv(X_test_scaled)
 
                     all_preds = torch.argmax(predictions_test, dim=1).cpu().numpy()
                     all_true = test_lables_for_visual
