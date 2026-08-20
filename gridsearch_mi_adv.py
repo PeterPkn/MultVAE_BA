@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 import os
 import numpy as np
 import gc
-import time
+import copy
 
 
 # PIP install list: torch pandas numpy scipy scikit-learn rmet matplotlib tqdm
@@ -72,7 +72,10 @@ def run_grid_search(args):
             if metrics and 'ndcg@10' in metrics:
                 avg_ndcg10 += float(metrics['ndcg@10']) / 5.0  # Average NDCG@10 over 5 folds
 
-
+            train_dataset = DataLoader(train_loader_list[fold], batch_size=args.batch_size, shuffle=True)
+            val_dataset = DataLoader(val_loader_list[fold], batch_size=args.batch_size, shuffle=False)
+            test_dataset = DataLoader(test_loader_list[fold], batch_size=args.batch_size, shuffle=False)
+            
             # Colletc data for adv training,
             features_for_pca = []
             lables_for_visual = []
@@ -128,6 +131,8 @@ def run_grid_search(args):
 
             max_bacc = 0.0
             best_model = None
+            best_adv_dropout = None
+            best_adv_hidden = None
             # Train ADV on Train -> evaulate performance on Validation and then at the end check B_ACC on Test set
             for i, combo in enumerate(combinations):
                 params = dict(zip(keys, combo))
@@ -182,7 +187,9 @@ def run_grid_search(args):
 
                 if adv_b_acc >= max_bacc:
                     max_bacc = adv_b_acc
-                    best_model = adv_model
+                    best_model_state = copy.deepcopy(adv_model.state_dict())
+                    best_adv_hidden = params['hidden_dim']
+                    best_adv_dropout = params['dropout']
 
                 del adv_optim, adv_loss
                 del predictions_val, all_preds, all_true
@@ -209,8 +216,10 @@ def run_grid_search(args):
 
             X_test_scaled = scaler.transform(test_features_for_pca)
             test_b_acc = 0.0
-            if best_model != None:
-                best_model.eval()
+            if best_model is not None and best_adv_hidden is not None and best_adv_dropout is not None:
+                final_adv = ADV_net(200, best_adv_hidden, dropout=best_adv_dropout).to(device)
+                final_adv.load_state_dict(best_model)
+                final_adv.eval()
                 with torch.no_grad():
                     X_test_scaled = torch.from_numpy(X_test_scaled).to(device)
                     predictions_test = best_model(X_test_scaled)
