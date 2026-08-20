@@ -1,4 +1,5 @@
 import argparse
+from email.policy import default
 import itertools
 from torch import optim
 from NeuralNetworks.ADV_net import ADV_net
@@ -40,6 +41,17 @@ def run_grid_search(args):
     for _, mi_est in enumerate(['CLUB', 'VUB', 'L1Out', 'MINE']):
         print(f"\n--- Running Function {mi_est} ---")
 
+                    
+        match mi_est:
+            case 'VUB':
+                weight = 1.0
+            case 'L1Out':
+                weight = 50.0
+            case 'MINE':
+                weight = 50.0
+            case _:
+                weight = 1.0
+
         avg_b_acc = 0.0
         avg_ndcg10 = 0.0
 
@@ -53,6 +65,7 @@ def run_grid_search(args):
             train_user_info = train_info[fold]
             val_user_info = val_info[fold]
             test_user_info = test_info[fold]
+
             b_acc, metrics, model = train_multvae_da(
                 epochs=args.epochs,
                 train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True),
@@ -63,7 +76,7 @@ def run_grid_search(args):
                 test_loader=DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False),
                 anneal_steps=len(train_dataset) * args.anneal,
                 anneal_cap=args.anneal_cap,
-                club_weight=0.4,
+                club_weight=weight,
                 prioritize_bias=True,
                 latent_dim_domain=200,
                 mi_logvar=0.0,
@@ -191,7 +204,7 @@ def run_grid_search(args):
                     best_adv_hidden = params['hidden_dim']
                     best_adv_dropout = params['dropout']
 
-                del adv_optim, adv_loss
+                del adv_optim, adv_loss, adv_model
                 del predictions_val, all_preds, all_true
 
             #check the accuracy on the test data, has not seen this data befor -> cannot overfit  
@@ -244,6 +257,7 @@ def run_grid_search(args):
 
         result_entry = {
             'mi_est': mi_est,
+            'weight': weight,
             'balanced_accuracy': avg_b_acc,
             'ndcg@10': avg_ndcg10,
         }
