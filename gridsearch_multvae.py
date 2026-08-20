@@ -30,7 +30,7 @@ def run_grid_search(args):
 
     param_grid = {
     'estimator': ['CLUB', 'VUB', 'L1Out', 'MINE'],
-    'club_weight': [latent_dim_domain0.4, 1.0, 2.0, 3.0, 5.0],
+    'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
     'mi_logvar': [0.0],
     'latent_dim_domain': [200],
     'prioritize_bias': [True],
