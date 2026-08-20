@@ -343,7 +343,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
 
 
-            #bound = torch.clamp(bound, min=0.0)
+            bound = torch.clamp(bound, min=0.0)
 
             bound_sum += bound.item()
             kld_sum += KLD.item()
