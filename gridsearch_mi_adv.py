@@ -149,8 +149,6 @@ def run_grid_search(args):
             # Train ADV on Train -> evaulate performance on Validation and then at the end check B_ACC on Test set
             for i, combo in enumerate(combinations):
                 params = dict(zip(keys, combo))
-                print(f"\n--- Running Combination {i+1}/{len(combinations)} ---")
-                print(f"Parameters: {params}")
     
                 
                 # TRAIN ADV-net
@@ -249,6 +247,7 @@ def run_grid_search(args):
             gc.collect()
 
             torch.cuda.empty_cache()
+            print(f'{mi_est}: {test_b_acc} on {fold}/5')
 
             avg_b_acc += float(test_b_acc) / 5.0
             
