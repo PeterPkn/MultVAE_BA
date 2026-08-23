@@ -9,12 +9,12 @@
 
 echo DONE!!!
 
-../torch_env/bin/python3 gridsearch_multvae.py --dataset ml-1m --output_file ml1m_club_gs.csv
-../torch_env/bin/python3 gridsearch_multvae.py --dataset ekstrabladet --output_file ekstra_club_gs.csv
-../torch_env/bin/python3 gridsearch_multvae.py --dataset lfm-demobias --output_file demobias_club_gs.csv
+../torch_env/bin/python3 gridsearch_multvae.py --dataset ml-1m --output_file ml1m_bound_gs.csv
+../torch_env/bin/python3 gridsearch_multvae.py --dataset ekstrabladet --output_file ekstra_bound_gs.csv
+../torch_env/bin/python3 gridsearch_multvae.py --dataset lfm-demobias --output_file demobias_bound_gs.csv
 echo done...
 
-python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --output_file ml1m_mi_measured_bias.csv --model_type multvae_da
-python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --output_file ekstra_mi_measured_bias.csv --model_type multvae_da
-python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --output_file demobias_mi_measured_bias.csv --model_type multvae_da
+python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ml1m_Mult_measured_bias.csv --model_type multvae
+python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ekstra_Mult_measured_bias.csv --model_type multvae
+python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --dropout 0.4 --output_file demobias_Mult_measured_bias.csv --model_type multvae
 echo done...
