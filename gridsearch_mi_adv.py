@@ -40,7 +40,7 @@ def run_grid_search(args):
 
     for _, mi_est in enumerate(['CLUB', 'VUB', 'L1Out', 'MINE']):
         print(f"\n--- Running Function {mi_est} ---")
-        if args.noDA and mi_est != 'CLUB':
+        if args.model_type == 'multvae' and mi_est != 'CLUB':
             continue
                     
         match mi_est:
@@ -66,7 +66,7 @@ def run_grid_search(args):
             train_user_info = train_info[fold]
             val_user_info = val_info[fold]
             test_user_info = test_info[fold]
-            if args.noDA:
+            if args.model_type == 'multvae':
                 b_acc, metrics, model = train_multvae(
                     epochs=args.epochs,
                     train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True),
@@ -304,7 +304,6 @@ if __name__ == "__main__":
     parser.add_argument('--anneal_cap', type=float, default=0.1, help='KLD anneal cap')
     parser.add_argument('--output_file', type=str, default='grid_search_results.csv', help='CSV file to save results')
     parser.add_argument('--model_type', type=str, choices=['multvae', 'multvae_da', 'multvae_adv'], default='multvae_da', help='Type of model to train (default: multvae_da)', required=True)
-    parser.add_argument('--noDA', action='store_true', help='Gridsearch a pure MultVAE')
     parser.add_argument('--dropout', type=float, default=0.6, help='Set model dropout.')
     
     args = parser.parse_args()
