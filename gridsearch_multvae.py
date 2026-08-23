@@ -106,7 +106,7 @@ def run_grid_search(args):
             test_user_info = test_info[fold]
             # Execute training process with the current parameters
             if args.noDA:
-                b_acc, metrics = train_multvae(
+                b_acc, metrics, _ = train_multvae(
                     epochs=params['epochs'],
                     train_loader=DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True),
                     train_user_info=train_user_info,
@@ -134,7 +134,8 @@ def run_grid_search(args):
                     latent_dim_domain=params['latent_dim_domain'],
                     mi_logvar=params['mi_logvar'],
                     mi_estimator=params['estimator'],
-                    use_bound=params['use_bound']
+                    use_bound=params['use_bound'],
+                    dropout=params['dropout']
                 )
             avg_b_acc += float(b_acc) / 5.0  # Average over 5 folds
             if metrics and 'ndcg@10' in metrics:
