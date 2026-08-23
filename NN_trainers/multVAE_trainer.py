@@ -275,6 +275,6 @@ Optimizer:              Adam (lr=1e-3, weight_decay=0.0)
             #print(f'Test Metrics: {batch_evaluator.get_results().aggregated_metrics}')
             perf_results = batch_evaluator.get_results().aggregated_metrics
             save_training_log(filepath=f'./multvae_{dataset}_training_log', infostr=infostr, metric1_name='Balanced Accuracy', metric1_values=bacc_metrics, metric2_name='Val NDCG@10', metric2_values=ndcg_metrics, test_performance=perf_results['ndcg@10'], test_bias=b_acc)
-            return b_acc, perf_results
+            return b_acc, perf_results, model
         
-    return b_acc, None
+    return b_acc, None, model
