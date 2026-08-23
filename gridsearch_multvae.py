@@ -29,7 +29,7 @@ def run_grid_search(args):
     }
 
     param_grid = {
-    'estimator': ['CLUB', 'VUB', 'L1Out', 'MINE'],
+    'estimator': ['CLUB', 'VUB'],
     'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
     'mi_logvar': [0.0],
     'latent_dim_domain': [200],
@@ -38,12 +38,13 @@ def run_grid_search(args):
     'anneal_period': [45],
     'batch_size': [1024],
     'epochs': [100],
-    'dropout': [0.6]
+    'dropout': [0.6],
+    'use_bound': [True, False]
     }
 
     if args.dataset == 'lfm-demobias':
         param_grid = {
-            'estimator': ['CLUB', 'VUB', 'L1Out', 'MINE'],
+            'estimator': ['CLUB', 'VUB'],
             'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
             'mi_logvar': [0.0],
             'latent_dim_domain': [200],
@@ -52,7 +53,8 @@ def run_grid_search(args):
             'anneal_period': [60],
             'batch_size': [1024],
             'epochs': [50],
-            'dropout': [0.4]
+            'dropout': [0.4],
+            'use_bound': [True, False]
             }
 
     keys = list(param_grid.keys())

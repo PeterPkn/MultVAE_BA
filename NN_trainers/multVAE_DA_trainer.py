@@ -144,7 +144,7 @@ def calculate_performance_score(bacc, ndcg, best_bacc, best_ndcg):
     return perf_metric/2
 
 
-def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5.0, prioritize_bias=False, latent_dim_domain=200, mi_estimator="CLUB", dropout=0.5, mi_logvar = 1.0):
+def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, test_loader=None, val_loader=None, anneal_steps=10000, anneal_cap=0.8, club_weight=5.0, prioritize_bias=False, latent_dim_domain=200, mi_estimator="CLUB", dropout=0.5, mi_logvar = 1.0, use_bound=False):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     latent_dim = 200
     model = MultVAE_DA([train_loader.dataset.num_items, 600, 200], latent_dim=latent_dim, dropout=dropout, training=True, latent_dim_domain=latent_dim_domain)
@@ -342,8 +342,8 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
                 bound = torch.mean(q_yi_xi - prior_ll)
 
 
-
-            #bound = torch.clamp(bound, min=0.0)
+            if use_bound == True:
+                bound = torch.clamp(bound, min=0.0)
 
             bound_sum += bound.item()
             kld_sum += KLD.item()
