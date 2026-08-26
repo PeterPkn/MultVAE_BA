@@ -13,6 +13,7 @@ import time
 # Import your existing modules
 from NN_trainers.multVAE_DA_trainer import train as train_multvae_da
 from NN_trainers.multVAE_trainer import train as train_multvae
+from NN_trainers.multVAE_ADV_trainer import train as train_multvae_adv
 from DataLoaders.ML1M_loader import get_dataset_dataloaders
 
 def run_grid_search(args):
@@ -27,34 +28,71 @@ def run_grid_search(args):
     # 'epochs': [150],
     # 'dropout': [0.6]
     }
+    if args.model_type == 'multvae_da':
 
-    param_grid = {
-    'estimator': ['CLUB', 'VUB'],
-    'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
-    'mi_logvar': [0.0],
-    'latent_dim_domain': [200],
-    'prioritize_bias': [True],
-    'anneal_cap': [0.1],
-    'anneal_period': [45],
-    'batch_size': [1024],
-    'epochs': [100],
-    'dropout': [0.6],
-    'use_bound': [True, False]
-    }
-
-    if args.dataset == 'lfm-demobias':
         param_grid = {
-            'estimator': ['CLUB', 'VUB'],
-            'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
-            'mi_logvar': [0.0],
-            'latent_dim_domain': [200],
-            'prioritize_bias': [True],
+        'estimator': ['CLUB', 'VUB'],
+        'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
+        'mi_logvar': [0.0],
+        'latent_dim_domain': [200],
+        'prioritize_bias': [True],
+        'anneal_cap': [0.1],
+        'anneal_period': [45],
+        'batch_size': [1024],
+        'epochs': [100],
+        'dropout': [0.6],
+        'use_bound': [True, False]
+        }
+
+        if args.dataset == 'lfm-demobias':
+            param_grid = {
+                'estimator': ['CLUB', 'VUB'],
+                'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
+                'mi_logvar': [0.0],
+                'latent_dim_domain': [200],
+                'prioritize_bias': [True],
+                'anneal_cap': [0.1],
+                'anneal_period': [60],
+                'batch_size': [1024],
+                'epochs': [50],
+                'dropout': [0.4],
+                'use_bound': [True, False]
+                }
+    elif args.model_type == 'multvae':
+        param_grid = {
             'anneal_cap': [0.1],
-            'anneal_period': [60],
+            'anneal_period': [45],
             'batch_size': [1024],
-            'epochs': [50],
-            'dropout': [0.4],
-            'use_bound': [True, False]
+            'epochs': [100],
+            'dropout': [0.6]
+        }
+        if args.dataset == 'lfm-demobias':
+            param_grid = {
+                'anneal_cap': [0.1],
+                'anneal_period': [60],
+                'batch_size': [1024],
+                'epochs': [50],
+                'dropout': [0.4]
+            }
+    else:# for multvae_adv
+        param_grid = {
+            'adv_net_dim': [100, 50, 200],
+            'alpha': [100.0, 500.0, 1000.0, 2300.0, 3000.0],
+            'anneal_cap': [0.1],
+            'anneal_period': [45],
+            'batch_size': [1024],
+            'epochs': [100],
+            'dropout': [0.6]
+        }
+        if args.dataset == 'lfm-demobias':
+            param_grid = {
+                'adv_net_dim': [100, 50, 200],
+                'alpha': [100.0, 500.0, 1000.0, 2300.0, 3000.0],
+                'anneal_cap': [0.1],
+                'anneal_period': [60],
+                'batch_size': [1024],
+                'epochs': [50],
+                'dropout': [0.4]
             }
 
     keys = list(param_grid.keys())
@@ -105,7 +143,7 @@ def run_grid_search(args):
             val_user_info = val_info[fold]
             test_user_info = test_info[fold]
             # Execute training process with the current parameters
-            if args.noDA:
+            if args.model_type == 'multvae':
                 b_acc, metrics, _ = train_multvae(
                     epochs=params['epochs'],
                     train_loader=DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True),
@@ -118,7 +156,7 @@ def run_grid_search(args):
                     anneal_cap=params['anneal_cap'],
                     dropout=params['dropout']
                 )
-            else:
+            elif args.model_type == 'multvae_da':
                 b_acc, metrics, _ = train_multvae_da(
                     epochs=params['epochs'],
                     train_loader=DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True),
@@ -137,6 +175,22 @@ def run_grid_search(args):
                     use_bound=params['use_bound'],
                     dropout=params['dropout']
                 )
+            else:
+                b_acc, metrics, _ = train_multvae_adv(
+                    epochs=params['epochs'],
+                    train_loader=DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True),
+                    train_user_info=train_user_info,
+                    val_user_info=val_user_info,
+                    test_user_info=test_user_info,
+                    val_loader=DataLoader(val_dataset, batch_size=params['batch_size'], shuffle=False),
+                    test_loader=DataLoader(test_dataset, batch_size=params['batch_size'], shuffle=False),
+                    anneal_steps=len(train_dataset) * params['anneal_period'],
+                    anneal_cap=params['anneal_cap'],
+                    adv_net_dim=params['adv_net_dim'],
+                    alpha=params['alpha'],
+                    store_info=True,
+                    dropout=params['dropout']
+                )                
             avg_b_acc += float(b_acc) / 5.0  # Average over 5 folds
             if metrics and 'ndcg@10' in metrics:
                 avg_ndcg10 += float(metrics['ndcg@10']) / 5.0  # Average NDCG@10 over 5 folds
@@ -167,7 +221,7 @@ def run_grid_search(args):
     df_results = pd.DataFrame(results)
     
     # sort the dataframe so the best NDCG@10 models are at the top
-    if args.noDA:
+    if args.model_type == 'multvae':
         if 'ndcg@10' in df_results.columns:
             df_results = df_results.sort_values(by=['ndcg@10'], ascending=False)
     else:
@@ -186,7 +240,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=50, help='Number of training epochs per combination')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
     parser.add_argument('--output_file', type=str, default='grid_search_results.csv', help='CSV file to save results')
-    parser.add_argument('--noDA', action='store_true', help='Gridsearch a pure MultVAE')
+    parser.add_argument('--model_type', type=str, choices=['multvae', 'multvae_da', 'multvae_adv'], default='multvae_da', help='Type of model to train (default: multvae_da)', required=True)
     
     args = parser.parse_args()
     

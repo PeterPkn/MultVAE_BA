@@ -14,7 +14,6 @@ import copy
 
 # PIP install list: torch pandas numpy scipy scikit-learn rmet matplotlib tqdm
 
-# Import your existing modules
 from NN_trainers.multVAE_DA_trainer import train as train_multvae_da
 from NN_trainers.multVAE_trainer import train as train_multvae
 from DataLoaders.ML1M_loader import get_dataset_dataloaders
@@ -79,8 +78,26 @@ def run_grid_search(args):
                     anneal_cap=args.anneal_cap,
                     dropout=args.dropout
                 )
-            else:
+            elif args.model_type == 'multvae_da':
                 b_acc, metrics, model = train_multvae_da(
+                    epochs=args.epochs,
+                    train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True),
+                    train_user_info=train_user_info,
+                    val_user_info=val_user_info,
+                    test_user_info=test_user_info,
+                    val_loader=DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False),
+                    test_loader=DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False),
+                    anneal_steps=len(train_dataset) * args.anneal,
+                    anneal_cap=args.anneal_cap,
+                    club_weight=weight,
+                    prioritize_bias=True,
+                    latent_dim_domain=200,
+                    mi_logvar=0.0,
+                    mi_estimator=mi_est,
+                    dropout=args.dropout
+                )
+            else:
+                b_acc, metrics, model = train_multvae_da( # TODO: Replace with ADV
                     epochs=args.epochs,
                     train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True),
                     train_user_info=train_user_info,
