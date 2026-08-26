@@ -286,13 +286,26 @@ def run_grid_search(args):
             
 
 
+        if args.model_type == 'multvae_da':
+            result_entry = {
+                'mi_est': mi_est,
+                'weight': weight,
+                'balanced_accuracy': avg_b_acc,
+                'ndcg@10': avg_ndcg10,
+            }
 
-        result_entry = {
-            'mi_est': mi_est,
-            'weight': weight,
-            'balanced_accuracy': avg_b_acc,
-            'ndcg@10': avg_ndcg10,
-        }
+        if args.model_type == 'multvae_adv':
+            result_entry = {
+                'alpha': alpha,
+                'adv_net_dim': adv_net_dim,
+                'balanced_accuracy': avg_b_acc,
+                'ndcg@10': avg_ndcg10,
+            }
+        else:
+            result_entry = {
+                'balanced_accuracy': avg_b_acc,
+                'ndcg@10': avg_ndcg10,
+            }
             
         results.append(result_entry)
 
