@@ -16,6 +16,7 @@ import copy
 
 from NN_trainers.multVAE_DA_trainer import train as train_multvae_da
 from NN_trainers.multVAE_trainer import train as train_multvae
+from NN_trainers.multVAE_ADV_trainer import train as train_multvae_adv
 from DataLoaders.ML1M_loader import get_dataset_dataloaders
 
 def run_grid_search(args):
@@ -39,7 +40,7 @@ def run_grid_search(args):
 
     for _, mi_est in enumerate(['CLUB', 'VUB', 'L1Out', 'MINE']):
         print(f"\n--- Running Function {mi_est} ---")
-        if args.model_type == 'multvae' and mi_est != 'CLUB':
+        if (args.model_type == 'multvae' or args.model_type == 'multvae_adv') and mi_est != 'CLUB':
             continue
                     
         match mi_est:
@@ -51,6 +52,9 @@ def run_grid_search(args):
                 weight = 0.5
             case _:
                 weight = 0.5
+
+        alpha = 2300.0
+        adv_net_dim = 100
 
         avg_b_acc = 0.0
         avg_ndcg10 = 0.0
@@ -97,7 +101,7 @@ def run_grid_search(args):
                     dropout=args.dropout
                 )
             else:
-                b_acc, metrics, model = train_multvae_da( # TODO: Replace with ADV
+                b_acc, metrics, model = train_multvae_adv(
                     epochs=args.epochs,
                     train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True),
                     train_user_info=train_user_info,
@@ -107,11 +111,8 @@ def run_grid_search(args):
                     test_loader=DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False),
                     anneal_steps=len(train_dataset) * args.anneal,
                     anneal_cap=args.anneal_cap,
-                    club_weight=weight,
-                    prioritize_bias=True,
-                    latent_dim_domain=200,
-                    mi_logvar=0.0,
-                    mi_estimator=mi_est,
+                    adv_net_dim=adv_net_dim,
+                    alpha=alpha,
                     dropout=args.dropout
                 )
             if metrics and 'ndcg@10' in metrics:

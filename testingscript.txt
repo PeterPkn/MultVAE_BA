@@ -9,9 +9,9 @@
 
 echo DONE!!!
 
-../torch_env/bin/python3 gridsearch_multvae.py --dataset ml-1m --output_file ml1m_bound_gs.csv
-../torch_env/bin/python3 gridsearch_multvae.py --dataset ekstrabladet --output_file ekstra_bound_gs.csv
-../torch_env/bin/python3 gridsearch_multvae.py --dataset lfm-demobias --output_file demobias_bound_gs.csv
+../torch_env/bin/python3 gridsearch_multvae.py --dataset ml-1m --output_file ml1m_adv_gs.csv --model_type multvae_adv
+../torch_env/bin/python3 gridsearch_multvae.py --dataset ekstrabladet --output_file ekstra_adv_gs.csv --model_type multvae_adv
+../torch_env/bin/python3 gridsearch_multvae.py --dataset lfm-demobias --output_file demobias_adv_gs.csv --model_type multvae_adv
 echo done...
 
 python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ml1m_Mult_measured_bias.csv --model_type multvae
