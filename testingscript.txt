@@ -23,3 +23,17 @@ echo done...
 ../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ekstra_ADV_measured_bias.csv --model_type multvae_adv
 ../torch_env/bin/python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --dropout 0.4 --output_file demobias_ADV_measured_bias.csv --model_type multvae_adv
 echo done...
+
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ml1m_MI_measured_bias.csv --model_type multvae_da
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ekstra_MI_measured_bias.csv --model_type multvae_da
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --dropout 0.4 --output_file demobias_MI_measured_bias.csv --model_type multvae_da
+echo done...
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ml1m_BND_measured_bias.csv --model_type multvae_da --use_bound
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ekstra_BND_measured_bias.csv --model_type multvae_da --use_bound
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --dropout 0.4 --output_file demobias_BND_measured_bias.csv --model_type multvae_da --use_bound
+echo done...
+
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ml1m_Mult_measured_bias.csv --model_type multvae
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ekstra_Mult_measured_bias.csv --model_type multvae
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --dropout 0.4 --output_file demobias_Mult_measured_bias.csv --model_type multvae
+echo done...

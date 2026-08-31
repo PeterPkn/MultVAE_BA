@@ -42,18 +42,17 @@ def run_grid_search(args):
         print(f"\n--- Running Function {mi_est} ---")
         if (args.model_type == 'multvae' or args.model_type == 'multvae_adv') and mi_est != 'CLUB':
             continue
-                    
         match mi_est:
             case 'VUB':
-                weight = 0.5
+                weight = 0.3
             case 'L1Out':
-                weight = 0.5
+                weight = 0.3
             case 'MINE':
-                weight = 0.5
+                weight = 0.3
             case _:
-                weight = 0.5
+                weight = 0.3
 
-        alpha = 100.0
+        alpha = 60.0
         adv_net_dim = 200
 
         avg_b_acc = 0.0
@@ -98,7 +97,8 @@ def run_grid_search(args):
                     latent_dim_domain=200,
                     mi_logvar=0.0,
                     mi_estimator=mi_est,
-                    dropout=args.dropout
+                    dropout=args.dropout,
+                    use_bound = args.use_bound
                 )
             else:
                 b_acc, metrics, model = train_multvae_adv(
@@ -336,6 +336,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_file', type=str, default='grid_search_results.csv', help='CSV file to save results')
     parser.add_argument('--model_type', type=str, choices=['multvae', 'multvae_da', 'multvae_adv'], default='multvae_da', help='Type of model to train (default: multvae_da)', required=True)
     parser.add_argument('--dropout', type=float, default=0.6, help='Set model dropout.')
+    parser.add_argument('--use_bound', type=bool, default=True, help='Whether to use the bound for MI estimation.')
     
     args = parser.parse_args()
     
