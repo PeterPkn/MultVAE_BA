@@ -40,19 +40,19 @@ def run_grid_search(args):
 
     for _, mi_est in enumerate(['CLUB', 'VUB', 'L1Out', 'MINE']):
         print(f"\n--- Running Function {mi_est} ---")
-        if (args.model_type == 'multvae' or args.model_type == 'multvae_adv') and mi_est != 'CLUB':
+        if (args.model_type == 'multvae' or args.model_type == 'multvae_adv' or args.just_club) and mi_est != 'CLUB':
             continue
         match mi_est:
             case 'VUB':
-                weight = 0.3
+                weight = 0.5
             case 'L1Out':
-                weight = 0.3
+                weight = 0.5
             case 'MINE':
-                weight = 0.3
+                weight = 0.5
             case _:
-                weight = 0.3
+                weight = 0.5
 
-        alpha = 120.0
+        alpha = 200.0
         adv_net_dim = 200
 
         avg_b_acc = 0.0
@@ -336,6 +336,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_type', type=str, choices=['multvae', 'multvae_da', 'multvae_adv'], default='multvae_da', help='Type of model to train (default: multvae_da)', required=True)
     parser.add_argument('--dropout', type=float, default=0.6, help='Set model dropout.')
     parser.add_argument('--use_bound', action='store_true', help='Whether to use the bound for MI estimation.')
+    parser.add_argument('--just_club', action='store_true', help='Whether to only run CLUB for MI estimation.')
     
     args = parser.parse_args()
     
