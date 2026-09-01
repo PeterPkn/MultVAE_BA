@@ -293,8 +293,7 @@ def run_grid_search(args):
                 'balanced_accuracy': avg_b_acc,
                 'ndcg@10': avg_ndcg10,
             }
-
-        if args.model_type == 'multvae_adv':
+        elif args.model_type == 'multvae_adv':
             result_entry = {
                 'alpha': alpha,
                 'adv_net_dim': adv_net_dim,
@@ -336,7 +335,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_file', type=str, default='grid_search_results.csv', help='CSV file to save results')
     parser.add_argument('--model_type', type=str, choices=['multvae', 'multvae_da', 'multvae_adv'], default='multvae_da', help='Type of model to train (default: multvae_da)', required=True)
     parser.add_argument('--dropout', type=float, default=0.6, help='Set model dropout.')
-    parser.add_argument('--use_bound', type=bool, default=True, help='Whether to use the bound for MI estimation.')
+    parser.add_argument('--use_bound', type=bool, action='store_true', help='Whether to use the bound for MI estimation.')
     
     args = parser.parse_args()
     
