@@ -52,7 +52,7 @@ def run_grid_search(args):
             case _:
                 weight = 0.3
 
-        alpha = 60.0
+        alpha = 120.0
         adv_net_dim = 200
 
         avg_b_acc = 0.0
