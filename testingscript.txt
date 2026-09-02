@@ -39,7 +39,10 @@ echo done...
 echo done...
 
 
-../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ml1m_ADV_measured_bias.csv --model_type multvae_adv
-../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ml1m_MI_measured_bias.csv --model_type multvae_da
-../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ml-1m --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ml1m_BND_measured_bias.csv --model_type multvae_da --use_bound
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ekstra_MI_measured_bias.csv --model_type multvae_da --mi_weight 0.1
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --dropout 0.4 --output_file demobias_MI_measured_bias.csv --model_type multvae_da --mi_weight 0.1
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ekstra_MI_measured_bias.csv --model_type multvae_da --mi_weight 0.2
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --dropout 0.4 --output_file demobias_MI_measured_bias.csv --model_type multvae_da --mi_weight 0.2
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset ekstrabladet --epochs 100 --batch_size 1024 --anneal 45 --anneal_cap 0.1 --dropout 0.6 --output_file ekstra_MI_measured_bias.csv --model_type multvae_da --mi_weight 0.3
+../torch_env/bin/python3 gridsearch_mi_adv.py --dataset lfm-demobias --epochs 50 --batch_size 1024 --anneal 60 --anneal_cap 0.1 --dropout 0.4 --output_file demobias_MI_measured_bias.csv --model_type multvae_da --mi_weight 0.3
 echo done...
