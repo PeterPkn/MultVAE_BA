@@ -31,8 +31,8 @@ def run_grid_search(args):
     if args.model_type == 'multvae_da':
 
         param_grid = {
-        'estimator': ['CLUB', 'VUB'],
-        'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
+        'estimator': ['CLUB', 'VUB', 'L1Out', 'MINE'],
+        'club_weight': [0.005, 0.01, 0.05, 0.1, 0.4],
         'mi_logvar': [0.0],
         'latent_dim_domain': [200],
         'prioritize_bias': [True],
@@ -46,8 +46,8 @@ def run_grid_search(args):
 
         if args.dataset == 'lfm-demobias':
             param_grid = {
-                'estimator': ['CLUB', 'VUB'],
-                'club_weight': [0.4, 1.0, 2.0, 3.0, 5.0],
+                'estimator': ['CLUB', 'VUB', 'L1Out', 'MINE'],
+                'club_weight': [0.005, 0.01, 0.05, 0.1, 0.4],
                 'mi_logvar': [0.0],
                 'latent_dim_domain': [200],
                 'prioritize_bias': [True],
