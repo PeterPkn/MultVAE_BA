@@ -349,7 +349,7 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             kld_sum += KLD.item()
             mll_sum += MLL.item()
 
-            loss_feature = MLL + anneal * KLD + (club_anneal * club_weight) * bound
+            loss_feature = MLL + anneal * KLD + club_anneal * bound
 
             #print(f"{MLL}, {KLD}, {bound}")
             loss_feature.backward()
