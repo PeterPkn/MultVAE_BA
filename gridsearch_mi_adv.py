@@ -55,7 +55,7 @@ def run_grid_search(args):
         if args.mi_weight != 0.0:
             weight = args.mi_weight
 
-        alpha = 30.0
+        alpha = 10.0
         adv_net_dim = 200
 
         avg_b_acc = 0.0
