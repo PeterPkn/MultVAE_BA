@@ -55,7 +55,7 @@ def run_grid_search(args):
         if args.mi_weight != 0.0:
             weight = args.mi_weight
 
-        alpha = 200.0
+        alpha = 30.0
         adv_net_dim = 200
 
         avg_b_acc = 0.0
@@ -340,7 +340,7 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0.6, help='Set model dropout.')
     parser.add_argument('--use_bound', action='store_true', help='Whether to use the bound for MI estimation.')
     parser.add_argument('--just_club', action='store_true', help='Whether to only run CLUB for MI estimation.')
-    parser.add_argument('--mi_weight', type=float, default=0.0, help='Weight for the MI loss term (default: 0.5)')
+    parser.add_argument('--mi_weight', type=float, default=0.0, help='Weight for the MI loss term (default: preset)')
     
     args = parser.parse_args()
     
