@@ -298,6 +298,9 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
             logvar_expanded = domain_pred_logvar.unsqueeze(0) # [1, B, latent_dim_domain]
 
             # Calculate pairwise log-likelihoods: [B, B] matrix
+            # This is the probability of the real features given the predicted distribution from the MI network
+            # The diagonal are the true pairs in the MI formula, where the prediction is for the actual z sample
+            # The rest are probabilities for features based on predictions not made for them, meaning they are not true pairs -> marginal distribution
             pairwise_ll = -0.5 * torch.sum(
                 logvar_expanded + (z_expanded - mu_expanded)**2 / torch.exp(logvar_expanded) + np.log(2 * np.pi),
                 dim=2
