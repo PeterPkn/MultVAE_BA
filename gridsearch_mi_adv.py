@@ -48,7 +48,7 @@ def run_grid_search(args):
             case 'L1Out':
                 weight = 0.4
             case 'MINE':
-                weight = 0.008
+                weight = 0.2
             case _:
                 weight = 0.4
 
