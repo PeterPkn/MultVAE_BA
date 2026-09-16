@@ -205,9 +205,9 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
     best_model = None
     last_model = None
 
-    # MINE EMA term for bias mitigation
-    ema_change = 0.99
-    ema_term = None
+    # MINE EMA term for bias mitigation, NOT NEEDED FOR BATCH SIZES LIKE 1024
+    #ema_change = 0.99
+    #ema_term = None
 
     features_for_pca = []
     lables_for_visual = []
@@ -319,7 +319,6 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
             # Toggle the estimator here
             if mi_estimator == "L1Out": 
-                # True Leave-One-Out Upper Bound (Requires logsumexp)
                 # We mask the diagonal with -infinity so it contributes 0 to the sum in exp space
                 masked_ll = pairwise_ll.masked_fill(~off_diag_mask, float('-inf'))
                 
@@ -337,12 +336,8 @@ def train(epochs, train_loader, train_user_info, val_user_info, test_user_info, 
 
             elif mi_estimator == "MINE":
                 off_diag_ll = pairwise_ll[off_diag_mask]
-                marginal_term = torch.logsumexp(off_diag_ll, dim=0) - np.log(batch_size * (batch_size - 1)) # divide by N*(N-1) to get average over all off-diagonal pairs
-                if ema_term is None:
-                    ema_term = torch.exp(marginal_term).detach()
-                else:
-                    ema_term = ema_change * ema_term + (1 - ema_change) * torch.exp(marginal_term).detach()
-                bound = torch.mean(q_yi_xi) - (torch.exp(marginal_term)/ema_term) # add EMA term to mitigate bias introduced by batching
+                marginal_term = torch.logsumexp(off_diag_ll, dim=0) - np.log(batch_size * (batch_size - 1))
+                bound = torch.mean(q_yi_xi) - marginal_term
 
             elif mi_estimator == "VUB": # Variational Upper Bound
                 # Variational Upper Bound (Uses a fixed unit Gaussian prior r(y))
