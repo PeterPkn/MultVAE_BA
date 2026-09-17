@@ -38,7 +38,7 @@ def run_grid_search(args):
     combinations = list(itertools.product(*(param_grid[k] for k in keys)))
     
 
-    for _, mi_est in enumerate(['MINE']):
+    for _, mi_est in enumerate(['VUB', 'L1Out', 'MINE', 'CLUB']):
         print(f"\n--- Running Function {mi_est} ---")
         if (args.model_type == 'multvae' or args.model_type == 'multvae_adv' or args.just_club) and mi_est != 'CLUB':
             continue
