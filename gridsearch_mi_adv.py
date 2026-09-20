@@ -44,13 +44,13 @@ def run_grid_search(args):
             continue
         match mi_est:
             case 'VUB':
-                weight = 5.0
+                weight = 10.0
             case 'L1Out':
-                weight = 5.0
+                weight = 10.0
             case 'MINE':
-                weight = 5.0
+                weight = 10.0
             case _:
-                weight = 5.0
+                weight = 10.0
 
         if args.mi_weight != 0.0:
             weight = args.mi_weight
