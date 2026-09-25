@@ -52,11 +52,12 @@ def run_grid_search(args):
             case _:
                 weight = 500.0
 
-        if args.mi_weight != 0.0:
-            weight = args.mi_weight
-
         alpha = 18.0
         adv_net_dim = 200
+
+        if args.mi_weight != 0.0:
+            weight = args.mi_weight
+            alpha = args.mi_weight
 
         avg_b_acc = 0.0
         avg_ndcg10 = 0.0
